@@ -40,7 +40,7 @@ async def is_duplicate(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@app.get('/cdb/api/health_check')
+@app.get('/health_check')
 async def health_endpoint():
     return {"message": "I'm OK"}
 
