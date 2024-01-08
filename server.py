@@ -39,7 +39,7 @@ async def is_duplicate(request: Request):
                 status = "duplicate"
             else:
                 status = "similarity"
-
+        print(f"Candidate pairs for the query: {article_id} article: {candidate_pairs}")
         # add new minhash to lsh and store in Redis.
         update_lsh_in_redis(lsh=lsh, lsh_key=lsh_key, minhash=minhash, article_id=article_id,
                             article_domain=article_domain)
