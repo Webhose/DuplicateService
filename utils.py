@@ -2,7 +2,7 @@ import pickle
 import string
 import nltk
 from redis import ConnectionPool, Redis
-from datasketch import MinHash, MinHashLSH
+from datasketch import MinHash
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 

@@ -8,6 +8,8 @@ from datasketch import MinHash, MinHashLSH
 from elasticsearch import Elasticsearch
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import requests
+
 nltk.download('punkt')
 nltk.download('stopwords')
 
@@ -175,35 +177,37 @@ def get_lsh_from_redis():
     return lsh
 
 
-def test_query(lsh, new_text, article_domain, article_id):
-    # Create Minhash signature for the new text
-    query_minhash = minhash_signature(new_text)
+def test_query(new_text, article_domain, article_id):
+    try:
+        base_url = 'http://0.0.0.0:9037'
+        data = {
+            "content": new_text,
+            "language": "english",
+            "domain": article_domain,
+            "article_id": article_id
+        }
 
-    # Find candidate pairs using the LSH model
-    candidate_pairs = lsh.query(query_minhash)
-
-    for candidate_pair in candidate_pairs:
-        _id = candidate_pair.split('|')[0]
-        domain = candidate_pair.split('|')[1]
-        if domain == article_domain:
-            print(f"Found duplicate for {article_domain} and {domain}")
-        else:
-            print(f"Found Similarity {article_domain} and {domain}")
-    # Display candidate pairs
-    print(f"Candidate pairs for the query: {article_id} article: {candidate_pairs}")
+        response = requests.post('{base_url}/is_duplicate'.format(base_url=base_url), json=data)
+        if response.ok:
+            if "duplicate" in response.text:
+                redis_connection.sadd("duplicate", article_id)
+            elif "similarity" in response.text:
+                redis_connection.sadd("similarity", article_id)
+    except Exception as e:
+        print(f"Failed to get data from ES with the following error: {e}")
+        return
 
 
 def run_test():
     print("Starting running test...")
     start_time = time.time()
-    lsh = get_lsh_from_redis()
 
     articles = redis_connection.keys("test-texts:*")
     for article in articles:
         article_id = article.decode().split(":")[1]
         text = redis_connection.hget(f"test-texts:{article_id}", "text").decode()
         article_domain = redis_connection.hget(f"test-texts:{article_id}", "article_domain").decode()
-        test_query(lsh, text, article_domain, article_id)
+        test_query(text, article_domain, article_id)
 
     elapsed_time = (time.time() - start_time) / 60
     print(f"Elapsed time for getting text from ES: {elapsed_time:.2f} minutes")

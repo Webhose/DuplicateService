@@ -4,6 +4,7 @@ from utils import minhash_signature, get_lsh_from_redis, update_lsh_in_redis
 import uvicorn
 import logging
 
+
 ADDRESS = "0.0.0.0"
 PORT = 9037
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 @app.post("/is_duplicate")
 async def is_duplicate(request: Request):
     try:
-        is_duplicate_document = False
+        status = None
 
         # get parameters from request
         json_data = await request.json()
@@ -35,16 +36,15 @@ async def is_duplicate(request: Request):
             _id = candidate_pair.split('|')[0]
             domain = candidate_pair.split('|')[1]
             if domain == article_domain:
-                print(f"Found duplicate for {article_domain} and {domain}")
-                is_duplicate_document = True
+                status = "duplicate"
             else:
-                print(f"Found Similarity {article_domain} and {domain}")
-
+                status = "similarity"
+        print(f"Candidate pairs for the query: {article_id} article: {candidate_pairs}")
         # add new minhash to lsh and store in Redis.
         update_lsh_in_redis(lsh=lsh, lsh_key=lsh_key, minhash=minhash, article_id=article_id,
                             article_domain=article_domain)
 
-        return JSONResponse(content={"is_duplicate_document": is_duplicate_document})
+        return JSONResponse(content={"status": status})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
