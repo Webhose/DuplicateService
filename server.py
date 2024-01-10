@@ -6,7 +6,7 @@ import logging
 
 
 ADDRESS = "0.0.0.0"
-PORT = 9037
+PORT = 9039
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
