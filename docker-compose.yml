@@ -3,7 +3,7 @@ version: "3.5"
 services:
 
   duplicateservice:
-          image: webzio/duplicateservice:test
+    image: webzio/duplicateservice:test
     hostname: '{{.Node.Hostname}}'
     ports:
       - 9039:9039
