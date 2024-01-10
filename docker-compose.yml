@@ -2,8 +2,8 @@ version: "3.5"
 
 services:
 
-  del_to_index:
-    image: webzio/del_to_index:latest
+  duplicateservice:
+          image: webzio/duplicateservice:test
     hostname: '{{.Node.Hostname}}'
     ports:
       - 9039:9039
