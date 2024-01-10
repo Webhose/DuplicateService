@@ -15,7 +15,8 @@ nltk.download('stopwords')
 
 page_size = 1000
 total_limit = 30000  # Set the total limit for processed documents
-redis_connection = redis.Redis(db=3)
+redis_connection = redis.Redis(host='viserion-002', port=6379, db=4)
+
 # Store the LSH object in Redis
 lsh_key = "english:lsh_index"
 
@@ -179,7 +180,7 @@ def get_lsh_from_redis():
 
 def test_query(new_text, article_domain, article_id):
     try:
-        base_url = 'http://0.0.0.0:9037'
+        base_url = 'http://viserion-002:9039'
         data = {
             "content": new_text,
             "language": "english",
@@ -193,6 +194,8 @@ def test_query(new_text, article_domain, article_id):
                 redis_connection.sadd("duplicate", article_id)
             elif "similarity" in response.text:
                 redis_connection.sadd("similarity", article_id)
+        else:
+            print(f"Failed to get response from DuplicateService with the following error: {response.text}")
     except Exception as e:
         print(f"Failed to get data from ES with the following error: {e}")
         return
