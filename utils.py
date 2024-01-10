@@ -8,7 +8,7 @@ from nltk.tokenize import word_tokenize
 
 nltk.download('punkt')
 nltk.download('stopwords')
-redis_pool = ConnectionPool(host='viserion-002', port=6379, db=4)
+redis_pool = ConnectionPool(host='10.2.1.64', port=6379, db=4)
 
 
 def preprocess_and_tokenize(text):
