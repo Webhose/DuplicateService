@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from utils import minhash_signature, get_lsh_from_redis, update_lsh_in_redis
+from utils import minhash_signature, get_lsh_from_redis, update_lsh_in_redis, update_candidates_duplicates_in_redis
 import uvicorn
 import logging
 
@@ -43,6 +43,8 @@ async def is_duplicate(request: Request):
         # add new minhash to lsh and store in Redis.
         update_lsh_in_redis(lsh=lsh, lsh_key=lsh_key, minhash=minhash, article_id=article_id,
                             article_domain=article_domain)
+        if candidate_pairs:
+            update_candidates_duplicates_in_redis(article_id=article_id, candidates=candidate_pairs)
 
         return JSONResponse(content={"status": status})
     except Exception as e:

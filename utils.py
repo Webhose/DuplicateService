@@ -8,7 +8,7 @@ from nltk.tokenize import word_tokenize
 
 nltk.download('punkt')
 nltk.download('stopwords')
-redis_pool = ConnectionPool(host='10.2.1.64', port=6379, db=4)
+redis_pool = ConnectionPool(host='crawler16', port=6379, db=4)
 
 
 def preprocess_and_tokenize(text):
@@ -65,4 +65,13 @@ def update_lsh_in_redis(lsh, minhash, article_id, article_domain, redis_pool=red
         # Re-raise the exception if needed
         # raise
 
+
+def update_candidates_duplicates_in_redis(article_id, candidates):
+    try:
+        with Redis(connection_pool=redis_pool) as redis_connection:
+            redis_connection.sadd(f"{article_id}", *candidates)
+    except Exception as e:
+        print(f"Failed to update candidates duplicates in Redis: {str(e)}")
+        # Re-raise the exception if needed
+        # raise
 
