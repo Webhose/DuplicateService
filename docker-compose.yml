@@ -7,4 +7,5 @@ services:
     hostname: '{{.Node.Hostname}}'
     ports:
       - 9039:9039
-
+    volumes:
+      - /etc/hosts:/etc/hosts
