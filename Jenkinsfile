@@ -6,7 +6,7 @@ pipeline {
   stages {
     stage('Git pull') {
       steps {
-        sh 'ssh crawler16 \'cd /home/omgili/files/DuplicateService && git checkout master && git pull\''
+        sh 'ssh katie-002 \'cd /home/omgili/files/DuplicateService && git checkout master && git pull\''
       }
     }
     stage('Run Playbook') {
