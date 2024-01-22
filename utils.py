@@ -1,6 +1,7 @@
 import pickle
 import string
 import nltk
+from consts import Consts
 from redis import ConnectionPool, Redis
 from datasketch import MinHash
 from nltk.corpus import stopwords
@@ -8,7 +9,7 @@ from nltk.tokenize import word_tokenize
 
 nltk.download('punkt')
 nltk.download('stopwords')
-redis_pool = ConnectionPool(host='crawler16', port=6379, db=4)
+redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
 
 def preprocess_and_tokenize(text):

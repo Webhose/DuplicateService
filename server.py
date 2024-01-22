@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from utils import minhash_signature, get_lsh_from_redis, update_lsh_in_redis, update_candidates_duplicates_in_redis
 import uvicorn
 import logging
+from consts import Consts
 
 
 ADDRESS = "0.0.0.0"
@@ -36,9 +37,9 @@ async def is_duplicate(request: Request):
             _id = candidate_pair.split('|')[0]
             domain = candidate_pair.split('|')[1]
             if domain == article_domain:
-                status = "duplicate"
+                status = Consts.DUPLICATE
             else:
-                status = "similarity"
+                status = Consts.SIMILARITY
         print(f"Candidate pairs for the query: {article_id} article: {candidate_pairs}")
         # add new minhash to lsh and store in Redis.
         update_lsh_in_redis(lsh=lsh, lsh_key=lsh_key, minhash=minhash, article_id=article_id,

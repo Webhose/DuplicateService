@@ -4,6 +4,7 @@ import string
 import time
 import nltk
 import redis
+from consts import Consts
 from datasketch import MinHash, MinHashLSH
 from elasticsearch import Elasticsearch
 from nltk.corpus import stopwords
@@ -15,10 +16,7 @@ nltk.download('stopwords')
 
 page_size = 1000
 total_limit = 30000  # Set the total limit for processed documents
-redis_connection = redis.Redis(host='crawler16', port=6379, db=4)
-
-# Store the LSH object in Redis
-lsh_key = "english:lsh_index"
+redis_connection = redis.Redis(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
 
 def get_es_connection():
@@ -87,7 +85,7 @@ def get_texts_from_es():
             article_id = hit.get("_id")
             article_domain = hit.get("_source").get("thread").get("site")
             if text:
-                redis_connection.hset(f"test-texts:{article_id}", mapping={"text": text, "article_domain":article_domain})
+                redis_connection.hset(f"texts:{article_id}", mapping={"text": text, "article_domain": article_domain})
                 processed_documents += 1
 
         total_hits -= len(hits)
@@ -163,7 +161,7 @@ def create_lsh_model():
 
         # Serialize and store the LSH model in Redis
         serialized_lsh = pickle.dumps(lsh)
-        redis_connection.set(lsh_key, serialized_lsh)
+        redis_connection.set(Consts.LSH_KEY, serialized_lsh)
 
         elapsed_time = (time.time() - start_time) / 60
         print(f"Elapsed time for creating LSH model: {elapsed_time:.2f} minutes")
@@ -173,7 +171,7 @@ def create_lsh_model():
 
 
 def get_lsh_from_redis():
-    serialized_lsh = redis_connection.get(lsh_key)
+    serialized_lsh = redis_connection.get(Consts.LSH_KEY)
     lsh = pickle.loads(serialized_lsh)
     return lsh
 
@@ -187,7 +185,10 @@ def test_query(new_text, article_domain, article_id):
             "article_id": article_id
         }
 
-        response = requests.post('http://crawler16:9039/is_duplicate', json=data)
+        if article_id == "04dcd6e86ec78cb07bf90a2759d166432d50a2e9":
+            pass
+
+        response = requests.post('http://localhost:9039/is_duplicate', json=data)
         if response.ok:
             if "duplicate" in response.text:
                 redis_connection.sadd("duplicate", article_id)
