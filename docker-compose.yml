@@ -9,3 +9,11 @@ services:
       - 9039:9039
     volumes:
       - /etc/hosts:/etc/hosts
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 15s
+        failure_action: rollback
+        monitor: 15s
