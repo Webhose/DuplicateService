@@ -4,6 +4,7 @@ from utils import minhash_signature, get_lsh_from_redis, update_lsh_in_redis, up
 import uvicorn
 import logging
 from consts import Consts
+from datasketch import MinHashLSH
 
 
 ADDRESS = "0.0.0.0"
@@ -26,8 +27,12 @@ async def is_duplicate(request: Request):
         article_id = json_data.get('article_id', None)
         lsh_key = f"{language}:lsh_index"
 
-        # get lsh from redis
-        lsh = get_lsh_from_redis(lsh_key=lsh_key)
+        try:
+            # get lsh from redis
+            lsh = get_lsh_from_redis(lsh_key=lsh_key)
+        except Exception as e:
+            # need to create new lsh
+            lsh = MinHashLSH(threshold=0.9, num_perm=128)
 
         # calculate minhash for the new text
         minhash = await minhash_signature(content)
