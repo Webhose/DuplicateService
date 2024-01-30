@@ -15,7 +15,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 
 page_size = 1000
-total_limit = 30000  # Set the total limit for processed documents
+total_limit = 10000  # Set the total limit for processed documents
 redis_connection = redis.Redis(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
 
@@ -85,7 +85,7 @@ def get_texts_from_es():
             article_id = hit.get("_id")
             article_domain = hit.get("_source").get("thread").get("site")
             if text:
-                redis_connection.hset(f"texts:{article_id}", mapping={"text": text, "article_domain": article_domain})
+                redis_connection.hset(f"test-texts:{article_id}", mapping={"text": text, "article_domain": article_domain})
                 processed_documents += 1
 
         total_hits -= len(hits)
@@ -184,9 +184,6 @@ def test_query(new_text, article_domain, article_id):
             "domain": article_domain,
             "article_id": article_id
         }
-
-        if article_id == "04dcd6e86ec78cb07bf90a2759d166432d50a2e9":
-            pass
 
         response = requests.post('http://localhost:9039/is_duplicate', json=data)
         if response.ok:
