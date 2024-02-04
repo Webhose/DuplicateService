@@ -6,13 +6,28 @@ from redis import ConnectionPool, Redis
 from datasketch import MinHash
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import logging
 
-nltk.download('punkt')
-nltk.download('stopwords')
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
+logging.basicConfig(filename="duplicate_service_utils.log",
+                    format="%(asctime)s - %(levelname)s - %(message)s",
+                    level=logging.DEBUG)
 
-def preprocess_and_tokenize(text):
+logger = logging.getLogger()
+
+# Check if 'punkt' is already downloaded
+if not nltk.data.find('tokenizers/punkt'):
+    logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
+    nltk.download('punkt')
+
+# Check if 'stopwords' is already downloaded
+if not nltk.data.find('corpora/stopwords'):
+    logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
+    nltk.download('stopwords')
+
+
+def preprocess_and_tokenize(text, language):
     # Lowercase the text
     text = text.lower()
 
@@ -23,17 +38,17 @@ def preprocess_and_tokenize(text):
     tokens = word_tokenize(text)
 
     # Remove stopwords
-    stop_words = set(stopwords.words('english'))
+    stop_words = set(stopwords.words(f'{language}'))
     tokens = [token for token in tokens if token not in stop_words]
 
     return tokens
 
 
-async def minhash_signature(document, num_perm=128):
+async def minhash_signature(document, language, num_perm=128):
     minhash = MinHash(num_perm=num_perm)
 
     # Tokenize and preprocess the document
-    tokens = preprocess_and_tokenize(document)
+    tokens = preprocess_and_tokenize(document, language)
 
     # Update the Minhash with each token
     for token in tokens:
@@ -62,9 +77,7 @@ def update_lsh_in_redis(lsh, minhash, article_id, article_domain, redis_pool=red
             serialized_lsh = pickle.dumps(lsh)
             redis_connection.set(lsh_key, serialized_lsh)
     except Exception as e:
-        print(f"Failed to update LSH in Redis: {str(e)}")
-        # Re-raise the exception if needed
-        # raise
+        logger.critical(f"Failed to update LSH in Redis: {str(e)}")
 
 
 def update_candidates_duplicates_in_redis(article_id, candidates):
@@ -72,7 +85,4 @@ def update_candidates_duplicates_in_redis(article_id, candidates):
         with Redis(connection_pool=redis_pool) as redis_connection:
             redis_connection.sadd(f"{article_id}", *candidates)
     except Exception as e:
-        print(f"Failed to update candidates duplicates in Redis: {str(e)}")
-        # Re-raise the exception if needed
-        # raise
-
+        logger.critical(f"Failed to update candidates duplicates in Redis: {str(e)}")

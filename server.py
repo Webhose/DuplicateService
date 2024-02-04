@@ -6,19 +6,21 @@ import logging
 from consts import Consts
 from datasketch import MinHashLSH
 
-
 ADDRESS = "0.0.0.0"
 PORT = 9039
 
 app = FastAPI()
-logger = logging.getLogger(__name__)
+
+logging.basicConfig(filename="duplicate_service_server.log",
+                    format="%(asctime)s - %(levelname)s - %(message)s",
+                    level=logging.DEBUG)
+
+logger = logging.getLogger()
 
 
 @app.post("/is_duplicate")
 async def is_duplicate(request: Request):
     try:
-        status = None
-
         # get parameters from request
         json_data = await request.json()
         content = json_data.get('content')
@@ -30,22 +32,28 @@ async def is_duplicate(request: Request):
         try:
             # get lsh from redis
             lsh = get_lsh_from_redis(lsh_key=lsh_key)
-        except Exception as e:
+        except TypeError as e:
             # need to create new lsh
+            logger.error(f"Error while getting LSH from Redis: {str(e)} Creating new LSH")
             lsh = MinHashLSH(threshold=0.9, num_perm=128)
+        except Exception as e:
+            logger.error(f"Error while getting LSH from Redis: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
         # calculate minhash for the new text
-        minhash = await minhash_signature(content)
+        minhash = await minhash_signature(content, language)
 
         candidate_pairs = lsh.query(minhash)
-        for candidate_pair in candidate_pairs:
-            _id = candidate_pair.split('|')[0]
-            domain = candidate_pair.split('|')[1]
-            if domain == article_domain:
+        if candidate_pairs:
+            result = any(pair.split('|')[1] == article_domain for pair in candidate_pairs)
+            if result:
                 status = Consts.DUPLICATE
             else:
                 status = Consts.SIMILARITY
-        print(f"Candidate pairs for the query: {article_id} article: {candidate_pairs}")
+        else:
+            status = None
+
+        logger.info(f"Candidate pairs for the query: {article_id} article: {candidate_pairs}")
         # add new minhash to lsh and store in Redis.
         update_lsh_in_redis(lsh=lsh, lsh_key=lsh_key, minhash=minhash, article_id=article_id,
                             article_domain=article_domain)
@@ -54,6 +62,7 @@ async def is_duplicate(request: Request):
 
         return JSONResponse(content={"status": status})
     except Exception as e:
+        logger.critical(f"Internal Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
