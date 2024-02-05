@@ -11,7 +11,7 @@ PORT = 9039
 
 app = FastAPI()
 
-logging.basicConfig(filename="duplicate_service_server.log",
+logging.basicConfig(filename="/home/omgili/log/duplicate_service_server.log",
                     format="%(asctime)s - %(levelname)s - %(message)s",
                     level=logging.DEBUG)
 

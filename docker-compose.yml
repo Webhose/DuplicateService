@@ -9,6 +9,8 @@ services:
       - 9039:9039
     volumes:
       - /etc/hosts:/etc/hosts
+      - /home/omgili/log/:/home/omgili/log/
+    user: 1000:1000
     deploy:
       mode: replicated
       replicas: 1
