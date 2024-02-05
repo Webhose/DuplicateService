@@ -10,7 +10,7 @@ import logging
 
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
-logging.basicConfig(filename="log/duplicate_service_utils.log",
+logging.basicConfig(filename="duplicate_service_utils.log",
                     format="%(asctime)s - %(levelname)s - %(message)s",
                     level=logging.DEBUG)
 
