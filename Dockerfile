@@ -18,4 +18,11 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
+# Add the following line to download 'punkt'
+RUN python -m nltk.downloader punkt
+
+# Add the following line to download 'stopwords'
+RUN python -m nltk.downloader stopwords
+
+
 CMD ["python" , "server.py"]
