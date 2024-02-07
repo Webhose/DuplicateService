@@ -1,18 +1,9 @@
-import concurrent.futures
-import pickle
-import string
 import time
-import nltk
 import redis
 from consts import Consts
-from datasketch import MinHash, MinHashLSH
 from elasticsearch import Elasticsearch
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 import requests
 
-nltk.download('punkt')
-nltk.download('stopwords')
 
 page_size = 1000
 total_limit = 10000  # Set the total limit for processed documents
@@ -102,80 +93,6 @@ def get_texts_from_es():
     print(f"Elapsed time for getting text from ES: {elapsed_time:.2f} minutes")
 
 
-def preprocess_and_tokenize(text):
-    # Lowercase the text
-    text = text.lower()
-
-    # Remove punctuation
-    text = text.translate(str.maketrans('', '', string.punctuation))
-
-    # Tokenize the text using NLTK
-    tokens = word_tokenize(text)
-
-    # Remove stopwords
-    stop_words = set(stopwords.words('english'))
-    tokens = [token for token in tokens if token not in stop_words]
-
-    return tokens
-
-
-def minhash_signature(document, num_perm=128):
-    minhash = MinHash(num_perm=num_perm)
-
-    # Tokenize and preprocess the document
-    tokens = preprocess_and_tokenize(document)
-
-    # Update the Minhash with each token
-    for token in tokens:
-        minhash.update(token.encode('utf-8'))
-
-    return minhash
-
-
-def create_lsh_model():
-    try:
-        print("Starting creating LSH model...")
-        start_time = time.time()
-        lsh = MinHashLSH(threshold=0.9, num_perm=128)
-
-        # Pull text IDs from Redis set
-        article_ids = redis_connection.keys("texts:*")
-
-        # Function to retrieve text from Redis and compute Minhash signature
-        def compute_minhash_and_insert_lsh(article_key):
-            try:
-                article_id = article_key.decode().split(":")[1]
-                text = redis_connection.hget(f"texts:{article_id}", "text").decode()
-                article_domain = redis_connection.hget(f"texts:{article_id}", "article_domain").decode()
-                minhash = minhash_signature(text)
-
-                # Insert Minhash into LSH
-                lsh.insert(f"{article_id}|{article_domain}", minhash)
-            except Exception as e:
-                print(f"Failed to process article {article_domain} with the following error: {e}")
-
-        # Use ThreadPoolExecutor for parallelism
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit tasks for each article
-            executor.map(compute_minhash_and_insert_lsh, article_ids)
-
-        # Serialize and store the LSH model in Redis
-        serialized_lsh = pickle.dumps(lsh)
-        redis_connection.set(Consts.LSH_KEY, serialized_lsh)
-
-        elapsed_time = (time.time() - start_time) / 60
-        print(f"Elapsed time for creating LSH model: {elapsed_time:.2f} minutes")
-
-    except Exception as e:
-        print(f"Failed to create LSH model with the following error: {e}")
-
-
-def get_lsh_from_redis():
-    serialized_lsh = redis_connection.get(Consts.LSH_KEY)
-    lsh = pickle.loads(serialized_lsh)
-    return lsh
-
-
 def test_query(new_text, article_domain, article_id):
     try:
         data = {
@@ -185,7 +102,7 @@ def test_query(new_text, article_domain, article_id):
             "article_id": article_id
         }
 
-        response = requests.post('http://localhost:9039/is_duplicate', json=data)
+        response = requests.post(f'http://{Consts.HOST}:9039/is_duplicate', json=data)
         if response.ok:
             if "duplicate" in response.text:
                 redis_connection.sadd("duplicate", article_id)
@@ -215,6 +132,5 @@ def run_test():
 
 if __name__ == "__main__":
     # get_texts_from_es()
-    # create_lsh_model()
     run_test()
 
