@@ -18,8 +18,8 @@ pipeline {
   post {  
     failure {  
       sh "echo Sending Failed Email!"
-        emailext body: 'CI/CD Pipeline has been failed!',
-        subject: 'CI/CD pipeline failed!',
+        emailext body: '${DEFAULT_CONTENT} - CI/CD Pipeline has been failed!',
+        subject: '${DEFAULT_SUBJECT} - CI/CD pipeline failed!',
         mimeType: 'text/html',to: 'devops-alerts-aaaaimnya6pdacs5sfd7ewl7me@webz-io.slack.com'
     } 
   }
