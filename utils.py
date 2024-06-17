@@ -17,17 +17,17 @@ logger = logging.getLogger()
 
 # Check if 'punkt' is already downloaded
 # downloaded in Dockerfile
-# try:
-#     nltk.data.find('tokenizers/punkt')
-# except LookupError:
-#     logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
-#     nltk.download('punkt')
-#
-# try:
-#     nltk.data.find('corpora/stopwords')
-# except LookupError:
-#     logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
-#     nltk.download('stopwords')
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
+    nltk.download('punkt')
+
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
+    nltk.download('stopwords')
 
 
 def preprocess_and_tokenize(text, language):
