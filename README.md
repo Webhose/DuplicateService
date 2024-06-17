@@ -7,7 +7,8 @@ This service employs MinHash and Locality-Sensitive Hashing (LSH) to identify du
 
 1. **Create Virtual Environment:**
    ```bash
-   python -m venv venv
+   sudo apt install python3.10-venv
+   python3 -m venv venv
    ```
 
 2. **Activate Virtual Environment:**
