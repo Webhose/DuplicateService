@@ -10,25 +10,24 @@ import logging
 
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
-logging.basicConfig(filename="/home/omgili/log/duplicate_service_utils.log",
-                    format="%(asctime)s - %(levelname)s - %(message)s",
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
                     level=logging.DEBUG)
 
 logger = logging.getLogger()
 
 # Check if 'punkt' is already downloaded
 # downloaded in Dockerfile
-# try:
-#     nltk.data.find('tokenizers/punkt')
-# except LookupError:
-#     logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
-#     nltk.download('punkt')
-#
-# try:
-#     nltk.data.find('corpora/stopwords')
-# except LookupError:
-#     logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
-#     nltk.download('stopwords')
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
+    nltk.download('punkt')
+
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
+    nltk.download('stopwords')
 
 
 def preprocess_and_tokenize(text, language):

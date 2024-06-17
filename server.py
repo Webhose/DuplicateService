@@ -1,21 +1,13 @@
+from datasketch import MinHashLSH
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from utils import minhash_signature, get_lsh_from_redis, update_lsh_in_redis, update_candidates_duplicates_in_redis
+from utils import *
 import uvicorn
-import logging
-from consts import Consts
-from datasketch import MinHashLSH
 
 ADDRESS = "0.0.0.0"
 PORT = 9039
 
 app = FastAPI()
-
-logging.basicConfig(filename="/home/omgili/log/duplicate_service_server.log",
-                    format="%(asctime)s - %(levelname)s - %(message)s",
-                    level=logging.DEBUG)
-
-logger = logging.getLogger()
 
 
 @app.post("/is_duplicate")
