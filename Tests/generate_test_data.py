@@ -4,8 +4,8 @@ from consts import Consts
 from elasticsearch import Elasticsearch
 
 
-page_size = 500
-total_limit = 1000  # Set the total limit for processed documents
+page_size = 1000
+total_limit = 600000  # Set the total limit for processed documents
 redis_connection = redis.Redis(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
 
@@ -32,6 +32,15 @@ def get_query(scroll_id=None):
                     {
                         "match": {
                             "language": "english"
+                        }
+                    },
+                    {
+                        "range": {
+                            "sys_info.crawled": {
+                                "format": "strict_date_optional_time",
+                                "gte": "2024-06-15T21:00:00.000Z",
+                                "lte": "2024-06-16T21:00:00.000Z"
+                            }
                         }
                     }
                 ]
@@ -74,8 +83,8 @@ def get_texts_from_es():
             text = hit.get("_source").get("text")
             article_id = hit.get("_id")
             article_domain = hit.get("_source").get("thread").get("site")
-            if text and len(text) > 500 and processed_documents < total_limit:
-                redis_connection.hset(f"test-texts:{article_id}", mapping={"text": text[:500], "article_domain": article_domain})
+            if text and processed_documents < total_limit:
+                redis_connection.hset(f"full-test-texts:{article_id}", mapping={"text": text, "article_domain": article_domain})
                 processed_documents += 1
 
         total_hits -= len(hits)

@@ -1,6 +1,6 @@
 class Consts:
-    HOST = "tanya-dev"
-    # HOST = "localhost"
+    # HOST = "tanya-dev"
+    HOST = "localhost"
     REDIS_HOST = "crawler16"
     # REDIS_HOST = "localhost"
     REDIS_PORT = 6379
