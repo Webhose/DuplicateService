@@ -7,9 +7,10 @@ ADDRESS = "0.0.0.0"
 PORT = 9039
 
 app = FastAPI()
-batch_size = 100
+batch_size = 10000
 batch_counter = 0
 lsh_cache = None
+counter = 0
 
 
 @app.on_event("startup")
@@ -20,7 +21,7 @@ async def startup_event():
 
 @app.post("/is_duplicate")
 async def is_duplicate(request: Request):
-    global batch_counter
+    global batch_counter, counter
     try:
         # get parameters from request
         json_data = await request.json()
@@ -32,9 +33,10 @@ async def is_duplicate(request: Request):
 
         # Check if it's time to update Redis
         if batch_counter >= batch_size:
-            logger.info("Updating LSH in Redis...")
+            logger.info(f"Updating LSH in Redis... {counter}")
             await update_lsh_in_redis_batch(lsh_cache)
             batch_counter = 0
+            counter += 1
 
         return JSONResponse(content={"status": status})
     except Exception as e:

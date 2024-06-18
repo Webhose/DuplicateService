@@ -60,7 +60,6 @@ def preprocess_and_tokenize(text, language):
     return tokens
 
 
-@timeit_decorator
 async def minhash_signature(document, language, num_perm=128):
     minhash = MinHash(num_perm=num_perm)
 
