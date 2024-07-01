@@ -18,8 +18,16 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
+# Create a directory for NLTK data
+RUN mkdir -p /usr/local/share/nltk_data
+
+# Set environment variable
+ENV NLTK_DATA=/usr/local/share/nltk_data
+
 # Add the following line to download 'punkt'
 RUN python -m nltk.downloader punkt
 
 # Add the following line to download 'stopwords'
 RUN python -m nltk.downloader stopwords
+
+RUN chown 1000:1000 -R /usr/local/share/nltk_data

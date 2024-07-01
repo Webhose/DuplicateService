@@ -1,9 +1,9 @@
 import pika
 import json
 import requests
-from utils import *
 import tldextract
 from hashlib import sha256
+from utils import logger
 
 batch_size = 10000
 batch_counter = 0

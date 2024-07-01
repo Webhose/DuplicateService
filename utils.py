@@ -8,6 +8,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import logging
 import time
+import os
 
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
@@ -18,17 +19,32 @@ logger = logging.getLogger()
 
 # Check if 'punkt' is already downloaded
 # downloaded in Dockerfile
+#try:
+#    nltk.data.find('tokenizers/punkt')
+#except LookupError:
+#    logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
+#    nltk.download('punkt')
+
+#try:
+#    nltk.data.find('corpora/stopwords')
+#except LookupError:
+#    logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
+#    nltk.download('stopwords')
+
+nltk_data_path = os.getenv('NLTK_DATA', '/usr/local/share/nltk_data')
+nltk.data.path.append(nltk_data_path)
+
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
-    nltk.download('punkt')
+    nltk.download('punkt', download_dir=nltk_data_path)
 
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
     logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
     nltk.download('stopwords')
+
 
 
 def timeit_decorator(func):
