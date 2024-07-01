@@ -3,7 +3,7 @@ import json
 import requests
 import tldextract
 from hashlib import sha256
-from utils import logger
+from utils import logger, get_lsh_from_redis, Consts
 
 batch_size = 10000
 batch_counter = 0
