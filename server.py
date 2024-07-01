@@ -9,23 +9,28 @@ PORT = 9039
 app = FastAPI()
 batch_size = 10000
 batch_counter = 0
-lsh_cache = None
+lsh_cache_dict = dict()
 counter = 0
 
 
 @app.on_event("startup")
 async def startup_event():
-    global lsh_cache
-    lsh_cache = get_lsh_from_redis(lsh_key="en:lsh_index")  # Assuming 'en' as default language
+    global lsh_cache_dict
+    lsh_cache_dict = {
+        "english": get_lsh_from_redis(lsh_key="english:lsh_index"),
+        # if you have more languages, add them here
+    }
 
 
 @app.post("/is_duplicate")
 async def is_duplicate(request: Request):
-    global batch_counter, counter
+    global batch_counter, counter, lsh_cache_dict
     try:
         # get parameters from request
         json_data = await request.json()
-        status = await run_lsh_check(content=json_data.get('content'), language=json_data.get('language'), lsh_cache=lsh_cache,
+        language = json_data.get('language')
+        lsh_cache = lsh_cache_dict.get(language)
+        status = await run_lsh_check(content=json_data.get('content'), language=language, lsh_cache=lsh_cache,
                                      article_domain=json_data.get('domain'), article_id=json_data.get('article_id'))
 
         # Update request counter and add to pending updates
