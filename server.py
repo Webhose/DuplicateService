@@ -39,7 +39,7 @@ async def is_duplicate(request: Request):
         # Check if it's time to update Redis
         if batch_counter >= batch_size:
             logger.info(f"Updating LSH in Redis... {counter}")
-            await update_lsh_in_redis_batch(lsh_cache)
+            await update_lsh_in_redis_batch(lsh_cache, language)
             batch_counter = 0
             counter += 1
 

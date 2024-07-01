@@ -107,13 +107,13 @@ def get_lsh_from_redis(redis_pool=redis_pool, lsh_key=None):
         return lsh
 
 
-async def update_lsh_in_redis_batch(lsh_cache):
+async def update_lsh_in_redis_batch(lsh_cache, language):
     try:
         # Create a connection from the pool
         with Redis(connection_pool=redis_pool) as redis_connection:
             # Serialize and store the LSH model in Redis
             serialized_lsh = pickle.dumps(lsh_cache)
-            redis_connection.set("en:lsh_index", serialized_lsh)
+            redis_connection.set(f"{language}:lsh_index", serialized_lsh)
     except Exception as e:
         logger.critical(f"Failed to update LSH in Redis: {str(e)}")
 
