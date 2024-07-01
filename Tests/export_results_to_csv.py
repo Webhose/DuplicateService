@@ -14,16 +14,20 @@ def get_results():
         data = redis_connection.smembers(key.decode())
         total_ids += 1 + len(data)
         for item in data:
-            article_id = item.decode().split(":")[0]
-            results[key.decode()].append(article_id)
+            article_id, article_domain = item.decode().split("|")
+            results[key.decode()].append((article_id, article_domain))
     print(f"Total articles: {total_ids}")
     return results
 
 
 def write_to_csv(results):
+    headers = ["doc UUID", "domain", "similar doc UUID", "similar to domain"]
     with open('results.csv', 'w') as f:
+        f.write(",".join(headers) + "\n")
         for key, value in results.items():
-            f.write("%s,%s\n" % (key, value))
+            domain = redis_connection.hmget(f"test-texts:{key}", "article_domain")[0].decode()
+            for article_id, article_domain in value:
+                f.write("%s,%s,%s,%s\n" % (key, domain, article_id, article_domain))
 
 
 def main():
