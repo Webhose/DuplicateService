@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
 
-  duplicateservice:
+  server:
     image: webzio/duplicateservice:${TAG}
     hostname: '{{.Node.Hostname}}'
     ports:
@@ -11,6 +11,7 @@ services:
       - /etc/hosts:/etc/hosts
       - /home/omgili/log/:/home/omgili/log/
     user: 1000:1000
+    command: python server.py
     deploy:
       mode: replicated
       replicas: 1
@@ -19,3 +20,22 @@ services:
         delay: 15s
         failure_action: rollback
         monitor: 15s
+
+  consumer:
+    image: webzio/duplicateservice:${TAG}
+    hostname: '{{.Node.Hostname}}'
+    volumes:
+      - /etc/hosts:/etc/hosts
+      - /home/omgili/log/:/home/omgili/log/
+    user: 1000:1000
+    command: python RabbitMQ/rabbit_consumer.py
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 15s
+        failure_action: rollback
+        monitor: 15s
+    depends_on:
+      - server
