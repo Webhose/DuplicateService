@@ -148,7 +148,7 @@ def get_status_from_candidates(article_domain, candidate_pairs, article_id):
         status = Consts.DUPLICATE if any(
             pair.split('|')[1] == article_domain for pair in candidate_pairs) else Consts.SIMILARITY
         # Update candidates in Redis for potential duplicates
-        update_candidates_duplicates_in_redis(article_id=article_id, candidates=candidate_pairs)
+        # update_candidates_duplicates_in_redis(article_id=article_id, candidates=candidate_pairs)
     else:
         # No candidate pairs found
         status = None
