@@ -19,15 +19,15 @@ logger = logging.getLogger()
 
 # Check if 'punkt' is already downloaded
 # downloaded in Dockerfile
-#try:
+# try:
 #    nltk.data.find('tokenizers/punkt')
-#except LookupError:
+# except LookupError:
 #    logger.info("The 'punkt' resource is not downloaded. You may want to download it.")
 #    nltk.download('punkt')
 
-#try:
+# try:
 #    nltk.data.find('corpora/stopwords')
-#except LookupError:
+# except LookupError:
 #    logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
 #    nltk.download('stopwords')
 
@@ -44,7 +44,6 @@ try:
 except LookupError:
     logger.info("The 'stopwords' resource is not downloaded. You may want to download it.")
     nltk.download('stopwords')
-
 
 
 def timeit_decorator(func):
@@ -177,3 +176,13 @@ async def run_lsh_check(**kwargs):
     # Check for duplicates or similarity
     candidate_pairs = lsh_cache.query(minhash)
     return get_status_from_candidates(article_domain, candidate_pairs, article_id)
+
+
+# implement function to do - redis_connection.sadd("similarity", article_id)
+
+def store_article_in_redis(url):
+    try:
+        with Redis(connection_pool=redis_pool) as redis_connection:
+            redis_connection.sadd("similarity", url)
+    except Exception as e:
+        logger.critical(f"Failed to store article in Redis: {str(e)}")

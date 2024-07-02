@@ -3,7 +3,7 @@ import json
 import requests
 import tldextract
 from hashlib import sha256
-from utils import logger, get_lsh_from_redis, Consts
+from utils import logger, get_lsh_from_redis, Consts, store_article_in_redis
 
 batch_size = 10000
 batch_counter = 0
@@ -37,8 +37,9 @@ def callback(ch, method, properties, body):
         if response.ok:
 
             if "similarity" in response.text:
+                url = body.get('topicRecord').get('url')
                 logger.info(f"Article {body.get('topicRecord').get('url')} is similar")
-                logger.info("update document is syndication and send to DSS")
+                store_article_in_redis(url)
             else:
                 logger.info("document is not syndication and send to DSS")
             # elif "duplicate" in response.text:
