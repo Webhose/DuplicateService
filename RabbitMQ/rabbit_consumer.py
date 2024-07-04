@@ -3,17 +3,7 @@ import json
 import requests
 import tldextract
 from hashlib import sha256
-from utils import logger, get_lsh_from_redis, Consts, store_article_in_redis
-
-batch_size = 10000
-batch_counter = 0
-counter = 0
-
-
-def get_lsh_object(language):
-    lsh_key = f"{language[:2]}:lsh_index"
-    lsh_cache = get_lsh_from_redis(lsh_key=lsh_key)
-    return lsh_cache
+from utils import logger, Consts, store_article_in_redis
 
 
 def get_tld_from_url(url):
@@ -22,7 +12,6 @@ def get_tld_from_url(url):
 
 
 def callback(ch, method, properties, body):
-    global batch_counter, counter
     body = json.loads(body)
 
     data = {
@@ -51,22 +40,38 @@ def callback(ch, method, properties, body):
         return
 
 
-def main():
-    connection = pika.ConnectionParameters(
-        host='webhose-data-077',
-        credentials=pika.credentials.PlainCredentials(
-            'buzzilla', 'buzzilla',
-            erase_on_connect=False
+def get_rabbit_connection():
+    try:
+        connection = pika.ConnectionParameters(
+            host='webhose-data-077',
+            credentials=pika.credentials.PlainCredentials(
+                'buzzilla', 'buzzilla',
+                erase_on_connect=False
+            )
         )
-    )
-    connection = pika.BlockingConnection(connection)
-    channel = connection.channel()
+        connection = pika.BlockingConnection(connection)
+        return connection
+    except Exception as e:
+        logger.critical(f"Failed to get RabbitMQ connection with the following error: {e}")
+        return None
 
-    channel.queue_declare(queue='SyndicationQueue', durable=True)
 
-    channel.basic_consume(queue='SyndicationQueue', on_message_callback=callback, auto_ack=True)
+def start_consumer(connection):
+    try:
+        channel = connection.channel()
+        channel.queue_declare(queue='SyndicationQueue', durable=True)
+        channel.basic_consume(queue='SyndicationQueue', on_message_callback=callback, auto_ack=True)
+        logger.info("Starting consumer...")
+        channel.start_consuming()
+    except Exception as e:
+        logger.critical(f"Failed to start consumer with the following error: {e}")
 
-    channel.start_consuming()
+
+def main():
+    connection = get_rabbit_connection()
+    if not connection:
+        return
+    start_consumer(connection)
 
 
 if __name__ == '__main__':

@@ -110,22 +110,26 @@ async def update_lsh_in_redis_batch(lsh_cache, language):
     try:
         # Create a connection from the pool
         with Redis(connection_pool=redis_pool) as redis_connection:
+            lsh_key = f"{language}:lsh_index"
+
+            # Use Redis pipeline to minimize the number of round trips
+            pipeline = redis_connection.pipeline()
+            pipeline.exists(lsh_key)
+            exists = pipeline.execute()[0]
+
+            if exists:
+                # Retrieve and deserialize the existing LSH model
+                existing_lsh_data = redis_connection.get(lsh_key)
+                existing_lsh = pickle.loads(existing_lsh_data)
+
+                # Merge the existing LSH with the new LSH cache
+                existing_lsh.merge(lsh_cache, check_overlap=False)
+
+                # Use the merged LSH as the lsh_cache to be saved
+                lsh_cache = existing_lsh
+
             # Serialize and store the LSH model in Redis
             serialized_lsh = pickle.dumps(lsh_cache)
-            redis_connection.set(f"{language}:lsh_index", serialized_lsh)
-    except Exception as e:
-        logger.critical(f"Failed to update LSH in Redis: {str(e)}")
-
-
-def update_lsh_in_redis(lsh, minhash, article_id, article_domain, redis_pool=redis_pool, lsh_key=None):
-    try:
-        # Create a connection from the pool
-        with Redis(connection_pool=redis_pool) as redis_connection:
-            # Insert Minhash into LSH
-            lsh.insert(f"{article_id}|{article_domain}", minhash)
-
-            # Serialize and store the LSH model in Redis
-            serialized_lsh = pickle.dumps(lsh)
             redis_connection.set(lsh_key, serialized_lsh)
     except Exception as e:
         logger.critical(f"Failed to update LSH in Redis: {str(e)}")

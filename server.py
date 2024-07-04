@@ -5,12 +5,12 @@ import uvicorn
 
 ADDRESS = "0.0.0.0"
 PORT = 9039
+batch_size = 5000
+batch_counter = 0
+lsh_cache_dict = {}
+counter = 0
 
 app = FastAPI()
-batch_size = 10000
-batch_counter = 0
-lsh_cache_dict = dict()
-counter = 0
 
 
 @app.on_event("startup")
