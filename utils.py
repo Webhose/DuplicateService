@@ -184,9 +184,9 @@ async def run_lsh_check(**kwargs):
 
 # implement function to do - redis_connection.sadd("similarity", article_id)
 
-def store_article_in_redis(url):
+def store_article_in_redis(url, queue_name="similarity"):
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
-            redis_connection.sadd("similarity", url)
+            redis_connection.sadd(queue_name, url)
     except Exception as e:
         logger.critical(f"Failed to store article in Redis: {str(e)}")

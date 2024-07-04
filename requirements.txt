@@ -7,3 +7,4 @@ fastapi~=0.109.1
 requests~=2.31.0
 pika~=1.3.2
 tldextract~=5.1.2
+metrics3~=0.1.0.post2

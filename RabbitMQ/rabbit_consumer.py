@@ -4,6 +4,7 @@ import requests
 import tldextract
 from hashlib import sha256
 from utils import logger, Consts, store_article_in_redis
+from metrics3 import metrics
 
 
 def get_tld_from_url(url):
@@ -12,8 +13,8 @@ def get_tld_from_url(url):
 
 
 def callback(ch, method, properties, body):
+    metrics.count(Consts.TOTAL_DOCUMENTS)
     body = json.loads(body)
-
     data = {
         "content": body.get('topicRecord').get('topic'),
         "language": body.get('language'),
@@ -26,13 +27,19 @@ def callback(ch, method, properties, body):
         if response.ok:
 
             if "similarity" in response.text:
+                metrics.count(Consts.TOTAL_SIMILARITY)
                 url = body.get('topicRecord').get('url')
                 logger.info(f"Article {body.get('topicRecord').get('url')} is similar")
                 store_article_in_redis(url)
+            elif "duplicate" in response.text:
+                metrics.count(Consts.TOTAL_DUPLICATE)
+                url = body.get('topicRecord').get('url')
+                logger.info(f"Article {body.get('topicRecord').get('url')} is similar")
+                store_article_in_redis(url, queue_name="duplicate")
             else:
+                metrics.count(Consts.TOTAL_UNQIUE)
                 logger.info("document is not syndication and send to DSS")
-            # elif "duplicate" in response.text:
-            #     redis_connection.sadd("duplicate", article_id)
+
         else:
             logger.critical(f"Failed to get response from DuplicateService with the following error: {response.text}")
     except Exception as e:
