@@ -45,3 +45,4 @@ services:
 networks:
   duplicate:
     external: true
+    name: "host"
