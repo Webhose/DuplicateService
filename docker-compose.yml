@@ -39,3 +39,9 @@ services:
         monitor: 15s
     depends_on:
       - server
+    networks:
+      - duplicate
+
+networks:
+  duplicate:
+    external: true
