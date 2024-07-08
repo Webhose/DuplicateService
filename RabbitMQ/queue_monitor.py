@@ -1,13 +1,19 @@
-from utils import logger, Consts
 import redis
 from rabbit_utils import get_rabbit_connection
 import time
+from consts import Consts
+import logging
 
 REDIS_HOST = 'tbcrawler21'
 REDIS_PORT = 6379
 REDIS_DB = 0
 REDIS_KEY_SYNDICATE_ON = 'is_syndicate_on'
 SLEEP_INTERVAL = 60 * 3  # 3 minutes
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
+                    level=logging.DEBUG)
+
+logger = logging.getLogger()
 
 # Initialize Redis connection
 try:
