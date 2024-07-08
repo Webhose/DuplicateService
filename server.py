@@ -33,16 +33,17 @@ async def is_duplicate(request: Request):
         status = await run_lsh_check(content=json_data.get('content'), language=language, lsh_cache=lsh_cache,
                                      article_domain=json_data.get('domain'), article_id=json_data.get('article_id'))
 
-        # Update request counter and add to pending updates
-        batch_counter += 1
-
-        # Check if it's time to update Redis
-        logger.info(f"Batch Counter: {batch_counter}")
-        if batch_counter >= batch_size:
-            logger.info(f"Updating LSH in Redis... {counter}")
-            await update_lsh_in_redis_batch(lsh_cache, language)
-            batch_counter = 0
-            counter += 1
+        # never save the lsh cache in the request, it's not necessary
+        # # Update request counter and add to pending updates
+        # batch_counter += 1
+        #
+        # # Check if it's time to update Redis
+        # logger.info(f"Batch Counter: {batch_counter}")
+        # if batch_counter >= batch_size:
+        #     logger.info(f"Updating LSH in Redis... {counter}")
+        #     await update_lsh_in_redis_batch(lsh_cache, language)
+        #     batch_counter = 0
+        #     counter += 1
 
         return JSONResponse(content={"status": status})
     except Exception as e:
