@@ -12,20 +12,22 @@ def get_tld_from_url(url):
     return ext.registered_domain or ext.domain
 
 
-def callback(ch, method, properties, body):
-    metrics.count(Consts.TOTAL_DOCUMENTS)
-    body = json.loads(body)
-    data = {
-        "content": body.get('topicRecord').get('topic'),
-        "language": body.get('language'),
-        "domain": get_tld_from_url(body.get('topicRecord').get('url')),
-        "article_id": sha256(body.get('topicRecord').get('url').encode()).hexdigest()
-    }
-
+def validate_document(body):
+    # TODO consider to add a retry mechanism
+    """
+    Validate the document by sending it to the DuplicateService
+    :param body: The document to validate
+    :return: return updated doc with the new field.
+    """
     try:
+        data = {
+            "content": body.get('topicRecord').get('topic'),
+            "language": body.get('language'),
+            "domain": get_tld_from_url(body.get('topicRecord').get('url')),
+            "article_id": sha256(body.get('topicRecord').get('url').encode()).hexdigest()
+        }
         response = requests.post(f'http://{Consts.HOST}:9039/is_duplicate', json=data)
         if response.ok:
-
             if "similarity" in response.text:
                 metrics.count(Consts.TOTAL_SIMILARITY)
                 url = body.get('topicRecord').get('url')
@@ -39,12 +41,20 @@ def callback(ch, method, properties, body):
             else:
                 metrics.count(Consts.TOTAL_UNQIUE)
                 logger.info("document is not syndication and send to DSS")
-
         else:
+            metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_NOT_OK)
             logger.critical(f"Failed to get response from DuplicateService with the following error: {response.text}")
     except Exception as e:
+        metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_ERROR)
         logger.critical(f"Failed to get data from ES with the following error: {e}")
         return
+
+
+def callback(ch, method, properties, body):
+    metrics.count(Consts.TOTAL_DOCUMENTS)
+    body = json.loads(body)
+    validate_document(body)
+    # TODO need to send the document to DSS
 
 
 def get_rabbit_connection():
