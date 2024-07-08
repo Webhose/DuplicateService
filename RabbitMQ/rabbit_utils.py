@@ -1,5 +1,10 @@
 import pika
-from utils import logger, logging
+import logging
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
+                    level=logging.DEBUG)
+
+logger = logging.getLogger()
 
 logging.getLogger('pika').setLevel(logging.WARNING)
 
