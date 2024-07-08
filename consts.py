@@ -5,6 +5,8 @@ class Consts:
     REDIS_DB = 4
     DUPLICATE = "duplicate"
     SIMILARITY = "similarity"
+    MAX_MESSAGES_IN_QUEUE = 100000
+    QUEUE_NAME = 'SyndicationQueue'
 
     # Metrics
     TOTAL_LSH_OBJECT_CREATED = "total_lsh_object_created"

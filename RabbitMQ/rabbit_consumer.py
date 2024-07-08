@@ -1,10 +1,10 @@
-import pika
 import json
 import requests
 import tldextract
 from hashlib import sha256
 from utils import logger, Consts, store_article_in_redis
 from metrics3 import metrics
+from rabbit_utils import get_rabbit_connection
 
 
 def get_tld_from_url(url):
@@ -55,22 +55,6 @@ def callback(ch, method, properties, body):
     body = json.loads(body)
     validate_document(body)
     # TODO need to send the document to DSS
-
-
-def get_rabbit_connection():
-    try:
-        connection = pika.ConnectionParameters(
-            host='webhose-data-077',
-            credentials=pika.credentials.PlainCredentials(
-                'buzzilla', 'buzzilla',
-                erase_on_connect=False
-            )
-        )
-        connection = pika.BlockingConnection(connection)
-        return connection
-    except Exception as e:
-        logger.critical(f"Failed to get RabbitMQ connection with the following error: {e}")
-        return None
 
 
 def start_consumer(connection):
