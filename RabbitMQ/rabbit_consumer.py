@@ -42,7 +42,7 @@ def validate_document(body):
                 metrics.count(Consts.TOTAL_UNQIUE)
                 logger.info("document is not syndication and send to DSS")
         else:
-            metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_NOT_OK)
+            metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_NOT_OK, labels={"text": response.status_code})
             logger.critical(f"Failed to get response from DuplicateService with the following error: {response.text}")
     except Exception as e:
         metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_ERROR)
