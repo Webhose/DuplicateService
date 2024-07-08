@@ -46,6 +46,8 @@ async def is_duplicate(request: Request):
         #     counter += 1
 
         return JSONResponse(content={"status": status})
+    except ValueError as e:
+        return JSONResponse(content={"status": "duplicate_keys"})
     except Exception as e:
         logger.critical(f"Internal Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

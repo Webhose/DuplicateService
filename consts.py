@@ -7,6 +7,7 @@ class Consts:
     SIMILARITY = "similarity"
     MAX_MESSAGES_IN_QUEUE = 100000
     QUEUE_NAME = 'SyndicationQueue'
+    DUPLICATE_KEYS = "duplicate_keys"
 
     # Metrics
     TOTAL_LSH_OBJECT_CREATED = "total_lsh_object_created"
@@ -15,5 +16,6 @@ class Consts:
     TOTAL_UNQIUE = "total_unique"
     TOTAL_DOCUMENTS = "total_documents"
     TOTAL_DUPLICATE_REQUESTS_ERROR = "total_duplicate_requests_error"
-    TOTAL_DUPLICATE_REQUESTS_NOT_OK = "total_duplicate_requests_bad_response"
+    TOTAL_DUPLICATE_REQUESTS_NOT_OK = "duplicate_requests_bad_response_total"
     TOTAL_FAILED_CONSUME = "total_failed_consume"
+    TOTAL_DUPLICATE_KEYS = "total_duplicate_keys"
