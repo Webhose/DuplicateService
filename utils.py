@@ -157,7 +157,7 @@ def get_status_from_candidates(article_domain, candidate_pairs, article_id):
         # update_candidates_duplicates_in_redis(article_id=article_id, candidates=candidate_pairs)
     else:
         # No candidate pairs found
-        status = None
+        status = Consts.UNIQUE
     return status
 
 

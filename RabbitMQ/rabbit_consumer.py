@@ -30,20 +30,23 @@ def validate_document(body):
         }
         response = requests.post(f'http://{Consts.HOST}:9039/is_duplicate', json=data)
         if response.ok:
-            if "similarity" in response.text:
+            message = response.json().get('status')
+            if message == Consts.SIMILARITY:
                 metrics.count(Consts.TOTAL_SIMILARITY)
                 url = body.get('topicRecord').get('url')
                 store_article_in_redis(url)
-            elif "duplicate" in response.text:
+            elif message == Consts.DUPLICATE:
                 metrics.count(Consts.TOTAL_DUPLICATE)
                 url = body.get('topicRecord').get('url')
                 store_article_in_redis(url, queue_name="duplicate")
-            elif Consts.DUPLICATE_KEYS in response.text:
+            elif message == Consts.DUPLICATE_KEYS:
                 metrics.count(Consts.TOTAL_DUPLICATE_KEYS)
-                logger.info("document is not syndication and send to DSS")
-            else:
+            elif message == Consts.UNIQUE:
                 metrics.count(Consts.TOTAL_UNQIUE)
                 logger.info("document is not syndication and send to DSS")
+            else:
+                metrics.count(Consts.TOTAL_OTHER)
+
         else:
             metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_NOT_OK)
             logger.critical(f"Failed to get response from DuplicateService with the following error: {response.text}")
