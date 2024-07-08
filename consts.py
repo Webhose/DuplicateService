@@ -14,3 +14,4 @@ class Consts:
     TOTAL_DOCUMENTS = "total_documents"
     TOTAL_DUPLICATE_REQUESTS_ERROR = "total_duplicate_requests_error"
     TOTAL_DUPLICATE_REQUESTS_NOT_OK = "total_duplicate_requests_not_ok"
+    TOTAL_FAILED_CONSUME = "total_failed_consume"
