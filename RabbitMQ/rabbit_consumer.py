@@ -20,33 +20,36 @@ def validate_document(body):
     :return: return updated doc with the new field.
     """
     try:
+        url = body.get('topicRecord').get('url')
+        article_id = sha256(url.encode()).hexdigest()
         data = {
             "content": body.get('topicRecord').get('topic'),
             "language": body.get('language'),
-            "domain": get_tld_from_url(body.get('topicRecord').get('url')),
-            "article_id": sha256(body.get('topicRecord').get('url').encode()).hexdigest()
+            "domain": get_tld_from_url(url),
+            "article_id": article_id
         }
         response = requests.post(f'http://{Consts.HOST}:9039/is_duplicate', json=data)
         if response.ok:
             if "similarity" in response.text:
                 metrics.count(Consts.TOTAL_SIMILARITY)
                 url = body.get('topicRecord').get('url')
-                logger.info(f"Article {body.get('topicRecord').get('url')} is similar")
                 store_article_in_redis(url)
             elif "duplicate" in response.text:
                 metrics.count(Consts.TOTAL_DUPLICATE)
                 url = body.get('topicRecord').get('url')
-                logger.info(f"Article {body.get('topicRecord').get('url')} is similar")
                 store_article_in_redis(url, queue_name="duplicate")
+            elif Consts.DUPLICATE_KEYS in response.text:
+                metrics.count(Consts.TOTAL_DUPLICATE_KEYS)
+                logger.info("document is not syndication and send to DSS")
             else:
                 metrics.count(Consts.TOTAL_UNQIUE)
                 logger.info("document is not syndication and send to DSS")
         else:
-            metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_NOT_OK, labels={"text": response.status_code})
+            metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_NOT_OK)
             logger.critical(f"Failed to get response from DuplicateService with the following error: {response.text}")
     except Exception as e:
         metrics.count(Consts.TOTAL_DUPLICATE_REQUESTS_ERROR)
-        logger.critical(f"Failed to get data from ES with the following error: {e}")
+        logger.critical(f"Failed to validate document with the following error: {e}")
         return
 
 
