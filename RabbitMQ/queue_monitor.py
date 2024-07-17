@@ -50,18 +50,18 @@ def main():
         if message_count > Consts.MAX_MESSAGES_IN_QUEUE:
             r.set(REDIS_KEY_SYNDICATE_ON, "False")
 
-        while message_count > Consts.MAX_MESSAGES_IN_QUEUE:
-            logger.info(f"Number of messages in queue: {message_count} should be under {Consts.MAX_MESSAGES_IN_QUEUE}."
-                        f" Pausing syndication.")
-
-            message_count = get_message_count(channel, Consts.QUEUE_NAME)
-
-            if message_count is None:
-                logger.critical("Failed to retrieve initial message count. Exiting.")
-                return
-
-            time.sleep(SLEEP_INTERVAL)
-        r.set(REDIS_KEY_SYNDICATE_ON, "True")
+        # while message_count > Consts.MAX_MESSAGES_IN_QUEUE:
+        #     logger.info(f"Number of messages in queue: {message_count} should be under {Consts.MAX_MESSAGES_IN_QUEUE}."
+        #                 f" Pausing syndication.")
+        #
+        #     message_count = get_message_count(channel, Consts.QUEUE_NAME)
+        #
+        #     if message_count is None:
+        #         logger.critical("Failed to retrieve initial message count. Exiting.")
+        #         return
+        #
+        #     time.sleep(SLEEP_INTERVAL)
+        # r.set(REDIS_KEY_SYNDICATE_ON, "True")
         logger.info(f"Queue '{Consts.QUEUE_NAME}' is under the limit. Resuming syndication.")
 
     except Exception as e:
