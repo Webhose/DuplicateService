@@ -14,7 +14,7 @@ from metrics3 import metrics
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 logger = logging.getLogger()
 
