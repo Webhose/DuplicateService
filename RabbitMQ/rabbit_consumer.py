@@ -143,7 +143,7 @@ def callback(ch, method, properties, body):
     body = json.loads(body)
     logger.info(f"Received document: {body}")
     validate_document(body)
-    logger.info(f"Pushing document to distribution queue: {body}")
+    logger.info(f"Pushing document to distribution queue")
     push_to_distribution_queue(body)
 
 
