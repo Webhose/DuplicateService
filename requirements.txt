@@ -1,6 +1,6 @@
 --extra-index-url=http://172.16.0.72:8888/simple/ --trusted-host=172.16.0.72
 nltk~=3.8.1
-redis~=3.5.3
+redis==3.5.3
 datasketch~=1.6.4
 elasticsearch~=6.3.1
 uvicorn~=0.23.2
