@@ -1,4 +1,6 @@
 import json
+import time
+
 import requests
 import tldextract
 from hashlib import sha256
@@ -6,6 +8,8 @@ from utils import logger, Consts, store_article_in_redis
 from metrics3 import metrics
 from rabbit_utils import get_rabbit_connection
 from rediscluster import RedisCluster, ClusterConnectionPool
+from redis import Redis, ConnectionPool
+
 
 
 def over_rpop(self, name, count=None):
@@ -49,7 +53,12 @@ def connect_to_redis(connect_details):
         metrics.count(Consts.TOTAL_FAILED_REDIS_CONNECTION)
         logger.error(
             "failed to create connection pool for Redis Cluster with error: {error}".format(error=connect_error))
-        return None
+        host = connect_details[0].get('host')
+        port = connect_details[0].get('port')
+        db = connect_details[0].get('db')
+        _redis_connection_pool = ConnectionPool(host=host, port=port, db=db)
+        _redis_connection = Redis(connection_pool=_redis_connection_pool, health_check_interval=10)
+        return _redis_connection
 
     # overwriting rpop functionality to support rpop with count (Redis >= 6.2.0)
     setattr(_redis_connection, "rpop", over_rpop.__get__(_redis_connection, _redis_connection.__class__))
@@ -59,6 +68,7 @@ def connect_to_redis(connect_details):
 
 def get_reddis_connection(site_type):
     reddis_config = {
+        # "mainstream": [{"host": "localhost", "port": "6379", "db": 3}],
         "mainstream": [{"host": "redis-news-002", "port": "6379"}, {"host": "redis-news-004", "port": "6379"}, {"host": "redis-news-005", "port": "6379"}],
         # "blogs": [{"host": "redis-blogs-001", "port": "6379"}, {"host": "redis-blogs-002", "port": "6379"}, {"host": "redis-blogs-003", "port": "6379"}],
         # "discussion": [{"host": "redis-discussions-001", "port": "6379"}, {"host": "redis-discussions-002", "port": "6379"}, {"host": "redis-discussions-003", "port": "6379"}],
@@ -155,6 +165,13 @@ def main():
         try:
             start_consumer(connection)
         except Exception as e:
+            connection = get_rabbit_connection()
+            if not connection:
+                logger.error("Failed to get RabbitMQ connection. Exiting.")
+                metrics.count(Consts.TOTAL_FAILED_FAILED_RABBIT_CONNECTION)
+                logger.info("Retrying to start consumer in 30 seconds...")
+                time.sleep(30)
+                continue
             metrics.count(Consts.TOTAL_FAILED_CONSUME)
             logger.critical(f"Failed to start consumer with the following error: {e}")
 
