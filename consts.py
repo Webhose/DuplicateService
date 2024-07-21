@@ -21,3 +21,6 @@ class Consts:
     TOTAL_DUPLICATE_REQUESTS_NOT_OK = "duplicate_requests_bad_response_total"
     TOTAL_FAILED_CONSUME = "total_failed_consume"
     TOTAL_DUPLICATE_KEYS = "total_duplicate_keys"
+    TOTAL_FAILED_REDIS_CONNECTION = "total_failed_redis_connection"
+    TOTAL_DOCUMENTS_FAILED_DISTRIBUTION = "total_documents_failed_distribution"
+    TOTAL_FAILED_FAILED_RABBIT_CONNECTION = "total_failed_failed_rabbit_connection"
