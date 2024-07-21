@@ -101,7 +101,7 @@ def get_lsh_from_redis(redis_pool=redis_pool, lsh_key=None):
         # need to create new lsh
         metrics.count(Consts.TOTAL_LSH_OBJECT_CREATED)
         logger.error(f"Error while getting LSH from Redis: Creating new LSH")
-        lsh = MinHashLSH(threshold=0.9, num_perm=128)
+        lsh = MinHashLSH(threshold=0.95, num_perm=128)
     except Exception as e:
         logger.error(f"Error while getting LSH from Redis: {str(e)}")
     finally:
