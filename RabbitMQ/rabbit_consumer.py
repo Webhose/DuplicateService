@@ -101,6 +101,7 @@ def validate_document(body):
     :return: return updated doc with the new field.
     """
     try:
+        logger.info("Validating document")
         url = body.get('topicRecord').get('url')
         article_id = sha256(url.encode()).hexdigest()
         data = {
@@ -141,7 +142,7 @@ def validate_document(body):
 def callback(ch, method, properties, body):
     metrics.count(Consts.TOTAL_DOCUMENTS)
     body = json.loads(body)
-    logger.info(f"Received document: {body}")
+    logger.info(f"Received document")
     validate_document(body)
     logger.info(f"Pushing document to distribution queue")
     push_to_distribution_queue(body)
