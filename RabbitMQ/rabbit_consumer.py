@@ -177,13 +177,16 @@ def main():
 def handle_consumer_exception(e):
     metrics.count(Consts.TOTAL_FAILED_CONSUME)
     logger.critical(f"Consumer failed: {e}")
-    time.sleep(30)
-    connection = get_rabbit_connection()
-    if not connection:
-        logger.error("Failed to reconnect to RabbitMQ. Exiting.")
-        metrics.count(Consts.TOTAL_FAILED_FAILED_RABBIT_CONNECTION)
-        return None
-    return connection
+
+    while True:
+        time.sleep(30)
+        connection = get_rabbit_connection()
+        if connection:
+            logger.info("Successfully reconnected to RabbitMQ.")
+            return connection
+        else:
+            logger.error("Failed to reconnect to RabbitMQ. Retrying...")
+            metrics.count(Consts.TOTAL_FAILED_FAILED_RABBIT_CONNECTION)
 
 
 if __name__ == '__main__':
