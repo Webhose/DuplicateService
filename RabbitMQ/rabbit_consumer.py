@@ -171,7 +171,7 @@ def main():
         try:
             start_consumer(connection)
         except Exception as e:
-            handle_consumer_exception(e)
+            connection = handle_consumer_exception(e)
 
 
 def handle_consumer_exception(e):
@@ -182,7 +182,8 @@ def handle_consumer_exception(e):
     if not connection:
         logger.error("Failed to reconnect to RabbitMQ. Exiting.")
         metrics.count(Consts.TOTAL_FAILED_FAILED_RABBIT_CONNECTION)
-        return
+        return None
+    return connection
 
 
 if __name__ == '__main__':
