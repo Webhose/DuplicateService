@@ -42,7 +42,7 @@ def main():
         # check number of messages in queue
         channel = connection.channel()
         message_count = get_message_count(channel, Consts.QUEUE_NAME)
-
+        logger.info(f"Initial message count: {message_count}")
         if message_count is None:
             logger.critical("Failed to retrieve initial message count. Exiting.")
             return
