@@ -48,6 +48,8 @@ def main():
             return
 
         if message_count > Consts.MAX_MESSAGES_IN_QUEUE:
+            logger.info(f"Number of messages in queue: {message_count} should be under {Consts.MAX_MESSAGES_IN_QUEUE}."
+                        f" Pausing syndication.")
             r.set(REDIS_KEY_SYNDICATE_ON, "False")
 
         # while message_count > Consts.MAX_MESSAGES_IN_QUEUE:
@@ -62,7 +64,7 @@ def main():
         #
         #     time.sleep(SLEEP_INTERVAL)
         # r.set(REDIS_KEY_SYNDICATE_ON, "True")
-        logger.info(f"Queue '{Consts.QUEUE_NAME}' is under the limit. Resuming syndication.")
+        # logger.info(f"Queue '{Consts.QUEUE_NAME}' is under the limit. Resuming syndication.")
 
     except Exception as e:
         logger.critical(f"Failed to monitor queue with the following error: {e}")
