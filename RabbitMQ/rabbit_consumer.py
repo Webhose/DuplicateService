@@ -90,6 +90,7 @@ def push_to_distribution_queue(document, method="NBDR"):
     redis_connection = get_redis_connection(document.get('index'))
 
     if message and redis_connection:
+        metrics.count(Consts.TOTAL_DOCUMENTS_DISTRIBUTION)
         redis_connection.lpush("distribution", message)
     else:
         logger.error("Failed to push document to distribution queue")
