@@ -6,78 +6,10 @@ from hashlib import sha256
 from utils import logger, Consts, store_article_in_redis
 from metrics3 import metrics
 from rabbit_utils import get_rabbit_connection
-from rediscluster import RedisCluster, ClusterConnectionPool
-from redis import Redis, ConnectionPool
+from redis_utils import RedisConnectionManager
 
-
-def over_rpop(self, name, count=None):
-    """
-    Overwriting original RPOP to support RPOP with count (Redis >= 6.2.0)
-    """
-    try:
-        if count:
-            return self.execute_command("RPOP", name, count)
-        return self.execute_command("RPOP", name)
-    except Exception as err:
-        logger.error(f"RPOP failed with error: {err}")
-        return None
-
-
-def connect_to_redis(connect_details):
-    """
-    Retrieves Redis connection based on its configuration (Redis Connection or RedisCluster)
-    :return: Redis or RedisCluster connections
-    """
-    try:
-        _hosts_list = connect_details if not isinstance(connect_details, str) else json.loads(connect_details)
-        if not _hosts_list:
-            raise ValueError("No hosts specified")
-
-        if len(_hosts_list) > 1:
-            return connect_to_redis_cluster(_hosts_list)
-        else:
-            return connect_to_single_redis_instance(_hosts_list[0])
-    except json.JSONDecodeError as json_err:
-        logger.error(f"JSON decoding failed: {json_err}")
-    except Exception as err:
-        metrics.count(Consts.TOTAL_FAILED_REDIS_CONNECTION)
-        logger.error(f"Failed to create Redis connection: {err}")
-        return None
-
-
-def connect_to_redis_cluster(hosts_list):
-    try:
-        pool = ClusterConnectionPool(startup_nodes=hosts_list, max_connections=200)
-        redis_connection = RedisCluster(connection_pool=pool, health_check_interval=10)
-        setattr(redis_connection, "rpop", over_rpop.__get__(redis_connection, redis_connection.__class__))
-        logger.info(f"Successful connection pool established to Redis Cluster: {hosts_list}")
-        return redis_connection
-    except Exception as err:
-        logger.error(f"Failed to connect to Redis Cluster: {err}")
-        raise
-
-
-def connect_to_single_redis_instance(host_details):
-    try:
-        pool = ConnectionPool(host=host_details['host'], port=host_details['port'], db=host_details.get('db', 0))
-        redis_connection = Redis(connection_pool=pool, health_check_interval=10)
-        setattr(redis_connection, "rpop", over_rpop.__get__(redis_connection, redis_connection.__class__))
-        logger.info(f"Connected to single Redis instance at {host_details['host']}:{host_details['port']}")
-        return redis_connection
-    except Exception as err:
-        logger.error(f"Failed to connect to single Redis instance: {err}")
-        raise
-
-
-def get_redis_connection(site_type):
-    redis_config = {
-        # "mainstream": [{"host": "localhost", "port": 6379, "db": 3}],
-        "mainstream": [
-            {"host": "redis-news-002", "port": "6379"}, {"host": "redis-news-004", "port": "6379"},
-            {"host": "redis-news-005", "port": "6379"}
-        ]
-    }
-    return connect_to_redis(redis_config.get(site_type))
+# Instantiate RedisConnectionManager globally to manage connections
+redis_manager = RedisConnectionManager()
 
 
 def get_tld_from_url(url):
@@ -85,16 +17,20 @@ def get_tld_from_url(url):
     return ext.registered_domain or ext.domain
 
 
-def push_to_distribution_queue(document, method="NBDR"):
-    message = f"{method} {json.dumps(document, default=lambda obj: getattr(obj, '__dict__', str(obj)))}"
-    redis_connection = get_redis_connection(document.get('index'))
+def push_to_distribution_queue(document, method="NBDR", queue_name="distribution"):
+    try:
+        message = f"{method} {json.dumps(document, default=lambda obj: getattr(obj, '__dict__', str(obj)))}"
+        redis_connection = redis_manager.get_redis_connection(document.get('index'))
 
-    if message and redis_connection:
-        metrics.count(Consts.TOTAL_DOCUMENTS_DISTRIBUTION)
-        redis_connection.lpush("distribution", message)
-    else:
-        logger.error("Failed to push document to distribution queue")
-        metrics.count(Consts.TOTAL_DOCUMENTS_FAILED_DISTRIBUTION)
+        if message and redis_connection:
+            # Push the message to the Redis queue
+            redis_connection.lpush(queue_name, message)
+            metrics.count(Consts.TOTAL_DOCUMENTS_DISTRIBUTION)
+        else:
+            logger.error("Failed to push document to distribution queue")
+            metrics.count(Consts.TOTAL_DOCUMENTS_FAILED_DISTRIBUTION)
+    except Exception as e:
+        logger.critical(f"Failed to push document to distribution queue: {e}")
 
 
 def validate_document(body):
@@ -148,16 +84,25 @@ def process_document(body):
 
 
 def callback(ch, method, properties, body):
-    metrics.count(Consts.TOTAL_DOCUMENTS)
-    body = json.loads(body)
-    process_document(body)
+    try:
+        metrics.count(Consts.TOTAL_DOCUMENTS)
+        body = json.loads(body)
+        process_document(body)
+        # Acknowledge message after processing
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+    except Exception as e:
+        metrics.count(Consts.TOTAL_FAILED_PROCESS_DOCUMENT)
+        logger.error(f"Failed to process document: {e}")
+        # Negative acknowledgment
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 
 def start_consumer(connection):
     logger.info("Starting consumer...")
     channel = connection.channel()
     channel.queue_declare(queue='SyndicationQueue', durable=True)
-    channel.basic_consume(queue='SyndicationQueue', on_message_callback=callback, auto_ack=True)
+    channel.basic_qos(prefetch_count=1)
+    channel.basic_consume(queue='SyndicationQueue', on_message_callback=callback)
     channel.start_consuming()
 
 

@@ -25,3 +25,4 @@ class Consts:
     TOTAL_DOCUMENTS_FAILED_DISTRIBUTION = "total_documents_failed_distribution"
     TOTAL_FAILED_FAILED_RABBIT_CONNECTION = "total_failed_failed_rabbit_connection"
     TOTAL_DOCUMENTS_DISTRIBUTION = "total_documents_distribution"
+    TOTAL_FAILED_PROCESS_DOCUMENT = "total_failed_process_document"
