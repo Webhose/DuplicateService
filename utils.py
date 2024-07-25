@@ -2,8 +2,9 @@ import pickle
 import string
 import nltk
 from consts import Consts
+from minhash_lsh_ttl import MinHashLSHTTL
 from redis import ConnectionPool, Redis
-from datasketch import MinHash, MinHashLSH
+from datasketch import MinHash
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import logging
@@ -89,52 +90,43 @@ async def minhash_signature(document, language, num_perm=128):
     return minhash
 
 
-def get_lsh_from_redis(redis_pool=redis_pool, lsh_key=None):
-    lsh = None
+def get_lsh_from_redis(lsh_key=None):
+    """
+    Get the LSH object from Redis. If the object is not found, create a new LSH object.
+    """
+    lsh_with_ttl = None
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
             if not lsh_key:
                 return None
             serialized_lsh = redis_connection.get(lsh_key)
-            lsh = pickle.loads(serialized_lsh)
+            if serialized_lsh:
+                lsh_with_ttl = pickle.loads(serialized_lsh)
+            else:
+                raise TypeError("LSH object not found in Redis.")
     except TypeError:
         # need to create new lsh
         metrics.count(Consts.TOTAL_LSH_OBJECT_CREATED)
         logger.error(f"Error while getting LSH from Redis: Creating new LSH")
-        lsh = MinHashLSH(threshold=0.95, num_perm=128)
+        lsh_with_ttl = MinHashLSHTTL(threshold=0.95, num_perm=128)
     except Exception as e:
         logger.error(f"Error while getting LSH from Redis: {str(e)}")
     finally:
-        return lsh
+        return lsh_with_ttl
 
 
-# async def update_lsh_in_redis_batch(lsh_cache, language):
-#     try:
-#         # Create a connection from the pool
-#         with Redis(connection_pool=redis_pool) as redis_connection:
-#             lsh_key = f"{language}:lsh_index"
-#
-#             # Use Redis pipeline to minimize the number of round trips
-#             pipeline = redis_connection.pipeline()
-#             pipeline.exists(lsh_key)
-#             exists = pipeline.execute()[0]
-#
-#             if exists:
-#                 # Retrieve and deserialize the existing LSH model
-#                 existing_lsh_data = redis_connection.get(lsh_key)
-#                 existing_lsh = pickle.loads(existing_lsh_data)
-#
-#                 # Merge the existing LSH with the new LSH cache
-#                 existing_lsh.merge(lsh_cache, check_overlap=False)
-#
-#                 # Use the merged LSH as the lsh_cache to be saved
-#                 lsh_cache = existing_lsh
-#
-#             # Serialize and store the LSH model in Redis
-#             serialized_lsh = pickle.dumps(lsh_cache)
-#             redis_connection.set(lsh_key, serialized_lsh)
-#     except Exception as e:
-#         logger.critical(f"Failed to update LSH in Redis: {str(e)}")
+async def save_lsh_to_redis(lsh_cache_dict):
+    """
+    Save the LSH object to Redis.
+    """
+    try:
+        with Redis(connection_pool=redis_pool) as redis_connection:
+            for language, lsh_with_ttl in lsh_cache_dict.items():
+                lsh_key = f"{language}:lsh_index"
+                serialized_lsh = pickle.dumps(lsh_with_ttl)
+                redis_connection.set(lsh_key, serialized_lsh)
+    except Exception as e:
+        logger.critical(f"Failed to save LSH to Redis: {str(e)}")
 
 
 def update_candidates_duplicates_in_redis(article_id, candidates):
@@ -183,8 +175,6 @@ async def run_lsh_check(**kwargs):
     candidate_pairs = lsh_cache.query(minhash)
     return get_status_from_candidates(article_domain, candidate_pairs, article_id)
 
-
-# implement function to do - redis_connection.sadd("similarity", article_id)
 
 def store_article_in_redis(url, queue_name="similarity"):
     try:
