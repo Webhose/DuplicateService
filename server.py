@@ -48,7 +48,8 @@ async def background_cleanup_task():
         logger.info("Running background cleanup task...")
         for language, lsh_cache in lsh_cache_dict.items():
             lsh_cache.cleanup_expired_keys()
-        await asyncio.sleep(3600)  # Sleep for 1 hour before the next cleanup
+        # Sleep for 1 hour before the next cleanup
+        await asyncio.sleep(3600)
 
 
 @app.post("/is_duplicate")
@@ -61,19 +62,6 @@ async def is_duplicate(request: Request):
         lsh_cache = lsh_cache_dict.get(language)
         status = await run_lsh_check(content=json_data.get('content'), language=language, lsh_cache=lsh_cache,
                                      article_domain=json_data.get('domain'), article_id=json_data.get('article_id'))
-
-        # never save the lsh cache in the request, it's not necessary
-        # # Update request counter and add to pending updates
-        # batch_counter += 1
-        #
-        # # Check if it's time to update Redis
-        # logger.info(f"Batch Counter: {batch_counter}")
-        # if batch_counter >= batch_size:
-        #     logger.info(f"Updating LSH in Redis... {counter}")
-        #     await update_lsh_in_redis_batch(lsh_cache, language)
-        #     batch_counter = 0
-        #     counter += 1
-
         return JSONResponse(content={"status": status})
     except ValueError as e:
         return JSONResponse(content={"status": "duplicate_keys"})
