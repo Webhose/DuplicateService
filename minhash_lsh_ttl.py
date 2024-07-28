@@ -1,6 +1,8 @@
+from metrics3 import metrics
 from datasketch import MinHashLSH, MinHash
 from datetime import datetime, timedelta
 import logging
+from consts import Consts
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
                     level=logging.INFO)
@@ -41,15 +43,14 @@ class MinHashLSHTTL:
 
     def cleanup_expired_keys(self):
         # TODO consider to optimize the logic
-        now = datetime.now()
-        expired_keys = [key for key, expire_time in self.expiration_times.items() if expire_time < now]
+        expired_keys = self.get_expired_keys()
         for key in expired_keys:
+            metrics.count(Consts.MINHASH_LSH_TTL_EXPIRED_KEYS_TOTAL)
             self.remove(key)
         logger.info(f"Expired keys removed: {expired_keys}")
 
-    def get_expiration_times(self):
-        return {key: expire_time.timestamp() for key, expire_time in self.expiration_times.items()}
-
-    def set_expiration_times(self, expiration_times):
-        self.expiration_times = {key: datetime.fromtimestamp(expire_time) for key, expire_time in
-                                 expiration_times.items()}
+    def get_expired_keys(self):
+        logger.info("Getting expired keys")
+        metrics.count(Consts.GET_EXPIRED_KEYS_TOTAL)
+        now = datetime.now()
+        return [key for key, expire_time in self.expiration_times.items() if expire_time < now]

@@ -26,3 +26,5 @@ class Consts:
     TOTAL_FAILED_FAILED_RABBIT_CONNECTION = "total_failed_failed_rabbit_connection"
     TOTAL_DOCUMENTS_DISTRIBUTION = "total_documents_distribution"
     TOTAL_FAILED_PROCESS_DOCUMENT = "total_failed_process_document"
+    MINHASH_LSH_TTL_EXPIRED_KEYS_TOTAL = "minhash_lsh_ttl_expired_keys_total"
+    GET_EXPIRED_KEYS_TOTAL = "get_expired_keys_total"
