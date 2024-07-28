@@ -3,7 +3,8 @@
 ![image](https://github.com/user-attachments/assets/26679e6e-5de0-404b-af2a-8624ee82a3f8)
 
 ## Overview
-This service employs MinHash and Locality-Sensitive Hashing (LSH) to identify duplicate documents. The functionality is exposed through the API endpoint `/is_duplicate`, enabling users to check if a given document duplicates any previously processed documents. The service is built on FastAPI, a modern and rapid web framework designed for creating APIs with Python 3.7+.
+This service employs MinHash and Locality-Sensitive Hashing (LSH) to identify duplicate documents. The functionality is exposed through the API endpoint /is_duplicate, enabling users to check if a given document duplicates any previously processed documents. The service is built on FastAPI, a modern and rapid web framework designed for creating APIs with Python 3.7+.
+
 
 ![img.png](img.png)
 
@@ -34,7 +35,8 @@ docker run -d --name duplicateservice -v /etc/hosts:/etc/hosts -v /home/omgili/l
 Replace `latest_tag` with the specific tag you want to use for the Docker image.
 
 ## Algorithm
-The Duplicate Detection Service utilizes MinHash and Locality-Sensitive Hashing (LSH) algorithms. MinHash generates a fixed-size signature for documents based on their content, while LSH hashes these signatures to efficiently find candidate duplicates or similarities.
+The Duplicate Detection Service utilizes MinHash and Locality-Sensitive Hashing (LSH) algorithms. MinHash generates a fixed-size signature for documents based on their content, while LSH hashes these signatures to efficiently find candidate duplicates or similarities. The LSH implementation includes a TTL (Time-to-Live) feature to automatically clean up expired entries, ensuring that outdated data does not affect the duplicate detection process.
+
 
 ## Service Details
 - **API Endpoint**: `/is_duplicate`
@@ -49,3 +51,5 @@ The RabbitMQ consumer (`rabbit_consumer.py`) listens to a queue (`SyndicationQue
 - Computes document signatures using MinHash.
 - Checks for duplicates using an external Duplicate Detection Service.
 - Stores duplicate or similar documents in Redis.
+- Redis Integration: Utilizes Redis for caching and managing LSH objects with TTL to handle document expiration efficiently.
+

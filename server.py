@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from utils import *
+import asyncio
 import uvicorn
+from contextlib import asynccontextmanager
 
 ADDRESS = "0.0.0.0"
 PORT = 9039
@@ -10,16 +12,43 @@ batch_counter = 0
 lsh_cache_dict = {}
 counter = 0
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global lsh_cache_dict
+
+    logger.info("Starting up...")
     lsh_cache_dict = {
         "english": get_lsh_from_redis(lsh_key="english:lsh_index"),
-        # if you have more languages, add them here
+        # add more languages if necessary
     }
+    logger.info("Initialized LSH cache with TTL for supported languages.")
+
+    # Optionally start background tasks
+    cleanup_task = asyncio.create_task(background_cleanup_task())
+
+    yield  # Control is returned to FastAPI here
+
+    logger.info("Shutting down...")
+    await save_lsh_to_redis(lsh_cache_dict)
+    logger.info("Saved LSH cache to Redis.")
+    if cleanup_task:
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass  # Task was cancelled
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+async def background_cleanup_task():
+    while True:
+        logger.info("Running background cleanup task...")
+        for language, lsh_cache in lsh_cache_dict.items():
+            lsh_cache.cleanup_expired_keys()
+        await asyncio.sleep(3600)  # Sleep for 1 hour before the next cleanup
 
 
 @app.post("/is_duplicate")
