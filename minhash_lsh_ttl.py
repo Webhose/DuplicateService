@@ -9,6 +9,9 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
 
 logger = logging.getLogger()
 
+logging.getLogger('redis').setLevel(logging.WARNING)
+logging.getLogger('rediscluster').setLevel(logging.WARNING)
+
 
 class MinHashLSHTTL:
     def __init__(self, threshold: float, num_perm: int, ttl: int = 86400):

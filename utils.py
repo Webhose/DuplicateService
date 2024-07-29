@@ -19,6 +19,9 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
 
 logger = logging.getLogger()
 
+logging.getLogger('redis').setLevel(logging.WARNING)
+logging.getLogger('rediscluster').setLevel(logging.WARNING)
+
 # Check if 'punkt' is already downloaded
 # downloaded in Dockerfile
 # try:
