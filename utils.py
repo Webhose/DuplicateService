@@ -51,52 +51,40 @@ except LookupError:
     nltk.download('stopwords')
 
 
+# Decorator to measure function execution time
 def timeit_decorator(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = (end_time - start_time)
-        print(f"Function '{func.__name__}' took {execution_time:.4f} seconds to execute.")
+        logger.info(f"Function '{func.__name__}' took {execution_time:.4f} seconds to execute.")
         return result
 
     return wrapper
 
 
+# Preprocess and tokenize the input text
 def preprocess_and_tokenize(text, language):
-    # Lowercase the text
     text = text.lower()
-
-    # Remove punctuation
     text = text.translate(str.maketrans('', '', string.punctuation))
-
-    # Tokenize the text using NLTK
     tokens = word_tokenize(text)
-
-    # Remove stopwords
-    stop_words = set(stopwords.words(f'{language}'))
+    stop_words = set(stopwords.words(language))
     tokens = [token for token in tokens if token not in stop_words]
-
     return tokens
 
 
+# Generate MinHash signature for a document
 async def minhash_signature(document, language, num_perm=128):
     minhash = MinHash(num_perm=num_perm)
-
-    # Tokenize and preprocess the document
     tokens = preprocess_and_tokenize(document, language)
-
-    # Update the Minhash with each token
     for token in tokens:
         minhash.update(token.encode('utf-8'))
-
     return minhash
 
 
+# Retrieve LSH object from Redis
 def get_lsh_from_redis(lsh_key=None):
-    """
-    Get the LSH object from Redis. If the object is not found, create a new LSH object.
-    """
     lsh_with_ttl = None
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
@@ -108,9 +96,8 @@ def get_lsh_from_redis(lsh_key=None):
             else:
                 raise TypeError("LSH object not found in Redis.")
     except TypeError:
-        # need to create new lsh
         metrics.count(Consts.TOTAL_LSH_OBJECT_CREATED)
-        logger.error(f"Error while getting LSH from Redis: Creating new LSH")
+        logger.error("LSH object not found in Redis. Creating new LSH.")
         lsh_with_ttl = MinHashLSHTTL(threshold=0.95, num_perm=128)
     except Exception as e:
         logger.error(f"Error while getting LSH from Redis: {str(e)}")
@@ -118,10 +105,8 @@ def get_lsh_from_redis(lsh_key=None):
         return lsh_with_ttl
 
 
+# Save LSH objects to Redis
 async def save_lsh_to_redis(lsh_cache_dict):
-    """
-    Save the LSH object to Redis.
-    """
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
             for language, lsh_with_ttl in lsh_cache_dict.items():
@@ -132,34 +117,28 @@ async def save_lsh_to_redis(lsh_cache_dict):
         logger.critical(f"Failed to save LSH to Redis: {str(e)}")
 
 
+# Update Redis with candidates for duplicate detection
 def update_candidates_duplicates_in_redis(article_id, candidates):
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
-            redis_connection.sadd(f"{article_id}", *candidates)
+            redis_connection.sadd(article_id, *candidates)
     except Exception as e:
         logger.critical(f"Failed to update candidates duplicates in Redis: {str(e)}")
 
 
+# Determine status from candidate pairs
 def get_status_from_candidates(article_domain, candidate_pairs, article_id):
-    # Simplified and optimized version
     candidate_pairs = [pair for pair in candidate_pairs if article_id not in pair]
-
     if candidate_pairs:
-        # Check if any candidate pair has the same article_domain as the current article
         status = Consts.DUPLICATE if any(
             pair.split('|')[1] == article_domain for pair in candidate_pairs) else Consts.SIMILARITY
-        # Update candidates in Redis for potential duplicates
-        # update_candidates_duplicates_in_redis(article_id=article_id, candidates=candidate_pairs)
     else:
-        # No candidate pairs found
         status = Consts.UNIQUE
     return status
 
 
+# Run LSH check to determine document status
 async def run_lsh_check(**kwargs):
-    """
-    Get the status of the document (duplicate or similarity) based on the content, language, article_domain, and article_id.
-    """
     content = kwargs.get('content')
     language = kwargs.get('language')
     article_domain = kwargs.get('article_domain')
@@ -169,16 +148,13 @@ async def run_lsh_check(**kwargs):
     if not lsh_cache:
         return None
 
-    # calculate minhash for the new text
     minhash = await minhash_signature(content, language)
-    # Insert Minhash into LSH
     lsh_cache.insert(f"{article_id}|{article_domain}", minhash)
-
-    # Check for duplicates or similarity
     candidate_pairs = lsh_cache.query(minhash)
     return get_status_from_candidates(article_domain, candidate_pairs, article_id)
 
 
+# Store article in Redis queue
 def store_article_in_redis(url, queue_name="similarity"):
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
