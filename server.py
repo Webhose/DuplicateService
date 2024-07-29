@@ -12,10 +12,12 @@ batch_counter = 0
 lsh_cache_dict = {}
 counter = 0
 
+cleanup_task = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global lsh_cache_dict
+    global lsh_cache_dict, cleanup_task
 
     logger.info("Starting up...")
     lsh_cache_dict = {
@@ -24,7 +26,7 @@ async def lifespan(app: FastAPI):
     }
     logger.info("Initialized LSH cache with TTL for supported languages.")
 
-    # Optionally start background tasks
+    # Start the background cleanup task
     cleanup_task = asyncio.create_task(background_cleanup_task())
 
     yield  # Control is returned to FastAPI here
@@ -32,12 +34,14 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     await save_lsh_to_redis(lsh_cache_dict)
     logger.info("Saved LSH cache to Redis.")
+
+    # Cancel the cleanup task
     if cleanup_task:
         cleanup_task.cancel()
         try:
             await cleanup_task
         except asyncio.CancelledError:
-            pass  # Task was cancelled
+            logger.info("Cleanup task was cancelled")
 
 
 app = FastAPI(lifespan=lifespan)
