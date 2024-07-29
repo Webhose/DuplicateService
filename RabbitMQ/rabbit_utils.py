@@ -7,6 +7,8 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
 logger = logging.getLogger()
 
 logging.getLogger('pika').setLevel(logging.WARNING)
+logging.getLogger('redis').setLevel(logging.WARNING)
+logging.getLogger('rediscluster').setLevel(logging.WARNING)
 
 
 def get_rabbit_connection():
