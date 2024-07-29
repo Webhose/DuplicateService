@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     logger.info("Initialized LSH cache with TTL for supported languages.")
 
     # Start the background cleanup task
-    cleanup_task = asyncio.create_task(background_cleanup_task())
+    # cleanup_task = asyncio.create_task(background_cleanup_task())
 
     yield  # Control is returned to FastAPI here
 
@@ -35,26 +35,26 @@ async def lifespan(app: FastAPI):
     await save_lsh_to_redis(lsh_cache_dict)
     logger.info("Saved LSH cache to Redis.")
 
-    # Cancel the cleanup task
-    if cleanup_task:
-        cleanup_task.cancel()
-        try:
-            await cleanup_task
-        except asyncio.CancelledError:
-            logger.info("Cleanup task was cancelled")
+    # # Cancel the cleanup task
+    # if cleanup_task:
+    #     cleanup_task.cancel()
+    #     try:
+    #         await cleanup_task
+    #     except asyncio.CancelledError:
+    #         logger.info("Cleanup task was cancelled")
 
 
 app = FastAPI(lifespan=lifespan)
 
 
-async def background_cleanup_task():
-    while True:
-        logger.info("Running background cleanup task...")
-        metrics.count(Consts.BACKGROUND_CLEANUP_TASK_TOTAL)
-        for language, lsh_cache in lsh_cache_dict.items():
-            lsh_cache.cleanup_expired_keys()
-        # Sleep for 1 hour before the next cleanup
-        await asyncio.sleep(3600)
+# async def background_cleanup_task():
+#     while True:
+#         logger.info("Running background cleanup task...")
+#         metrics.count(Consts.BACKGROUND_CLEANUP_TASK_TOTAL)
+#         for language, lsh_cache in lsh_cache_dict.items():
+#             lsh_cache.cleanup_expired_keys()
+#         # Sleep for 1 hour before the next cleanup
+#         await asyncio.sleep(10)
 
 
 @app.post("/is_duplicate")
