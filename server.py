@@ -46,6 +46,7 @@ app = FastAPI(lifespan=lifespan)
 async def background_cleanup_task():
     while True:
         logger.info("Running background cleanup task...")
+        metrics.count(Consts.BACKGROUND_CLEANUP_TASK_TOTAL)
         for language, lsh_cache in lsh_cache_dict.items():
             lsh_cache.cleanup_expired_keys()
         # Sleep for 1 hour before the next cleanup
