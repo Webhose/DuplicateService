@@ -28,3 +28,4 @@ class Consts:
     TOTAL_FAILED_PROCESS_DOCUMENT = "total_failed_process_document"
     MINHASH_LSH_TTL_EXPIRED_KEYS_TOTAL = "minhash_lsh_ttl_expired_keys_total"
     GET_EXPIRED_KEYS_TOTAL = "get_expired_keys_total"
+    BACKGROUND_CLEANUP_TASK_TOTAL = "background_cleanup_task_total"
