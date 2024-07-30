@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     yield  # Control is returned to FastAPI here
 
     logger.info("Shutting down...")
-    await save_lsh_to_redis(lsh_cache_dict)
+    save_lsh_to_redis(lsh_cache_dict)
     logger.info("Saved LSH cache to Redis.")
 
     # # Cancel the cleanup task

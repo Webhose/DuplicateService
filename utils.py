@@ -106,7 +106,7 @@ def get_lsh_from_redis(lsh_key=None):
 
 
 # Save LSH objects to Redis
-async def save_lsh_to_redis(lsh_cache_dict):
+def save_lsh_to_redis(lsh_cache_dict):
     try:
         with Redis(connection_pool=redis_pool) as redis_connection:
             for language, lsh_with_ttl in lsh_cache_dict.items():
