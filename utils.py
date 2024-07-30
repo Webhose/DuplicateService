@@ -10,7 +10,7 @@ from nltk.tokenize import word_tokenize
 import logging
 import time
 import os
-from metrics3 import metrics
+import metrics3_docker.metrics as metrics
 
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
