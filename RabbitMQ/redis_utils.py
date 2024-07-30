@@ -2,7 +2,7 @@ from rediscluster import RedisCluster, ClusterConnectionPool
 from redis import Redis, ConnectionPool
 from utils import logger, Consts
 import json
-from metrics3 import metrics
+import metrics3_docker.metrics as metrics
 
 
 class RedisConnectionManager:

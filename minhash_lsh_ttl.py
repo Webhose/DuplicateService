@@ -1,4 +1,4 @@
-from metrics3 import metrics
+import metrics3_docker.metrics as metrics
 from datasketch import MinHashLSH, MinHash
 from datetime import datetime, timedelta
 import heapq

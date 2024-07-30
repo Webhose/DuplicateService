@@ -4,7 +4,7 @@ import requests
 import tldextract
 from hashlib import sha256
 from utils import logger, Consts, store_article_in_redis
-from metrics3 import metrics
+import metrics3_docker.metrics as metrics
 from rabbit_utils import get_rabbit_connection
 from redis_utils import RedisConnectionManager
 
