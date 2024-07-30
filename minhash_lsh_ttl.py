@@ -55,4 +55,3 @@ class MinHashLSHTTL:
             except Exception as e:
                 logger.error(f"Error cleaning up expired keys: {e}")
                 break
-        logger.info("Expired keys cleanup completed.")
