@@ -4,6 +4,12 @@ from utils import *
 import asyncio
 import uvicorn
 from contextlib import asynccontextmanager
+import logging
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
+                    level=logging.INFO)
+
+logger = logging.getLogger()
 
 ADDRESS = "0.0.0.0"
 PORT = 9039
