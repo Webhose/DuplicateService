@@ -1,6 +1,7 @@
 import redis
+from consts import Consts
 
-r = redis.Redis(host='tbcrawler21', port=6379, db=4)
+r = redis.Redis(host=Consts.REDIS_HOST, port=6379, db=4)
 
 
 def delete_all_keys():
