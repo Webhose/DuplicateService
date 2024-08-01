@@ -1,8 +1,9 @@
 import argparse
 import redis
+from consts import Consts
 
 # Initialize Redis connection
-r = redis.Redis(host='tbcrawler21', port=6379, db=0)
+r = redis.Redis(host=Consts.REDIS_HOST, port=6379, db=0)
 
 
 def get_args():

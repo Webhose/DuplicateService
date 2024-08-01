@@ -4,7 +4,6 @@ import time
 from consts import Consts
 import logging
 
-REDIS_HOST = 'tbcrawler21'
 REDIS_PORT = 6379
 REDIS_DB = 0
 REDIS_KEY_SYNDICATE_ON = 'is_syndicate_on'
@@ -17,7 +16,7 @@ logger = logging.getLogger()
 
 # Initialize Redis connection
 try:
-    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+    r = redis.Redis(host=Consts.REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 except redis.RedisError as e:
     logger.critical(f"Failed to connect to Redis: {e}")
     exit(1)
