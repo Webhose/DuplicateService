@@ -87,6 +87,7 @@ class RedisConnectionManager:
         """
         redis_config = {
             # "mainstream": [{"host": "localhost", "port": 6379, "db": 3}],
+            "syndication": [{"host": "tanya-032", "port": 6379, "db": 0}],
             "mainstream": [
                 {"host": "redis-news-002", "port": "6379"},
                 {"host": "redis-news-004", "port": "6379"},

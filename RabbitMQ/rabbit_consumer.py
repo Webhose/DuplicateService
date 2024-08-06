@@ -5,7 +5,6 @@ import tldextract
 from hashlib import sha256
 from utils import logger, Consts, store_article_in_redis
 import metrics3_docker.metrics as metrics
-from rabbit_utils import get_rabbit_connection
 from redis_utils import RedisConnectionManager
 
 # Instantiate RedisConnectionManager globally to manage connections
@@ -83,41 +82,27 @@ def process_document(body):
     push_to_distribution_queue(body)
 
 
-def callback(ch, method, properties, body):
-    try:
-        metrics.count(Consts.TOTAL_DOCUMENTS)
-        body = json.loads(body)
-        process_document(body)
-        # Acknowledge message after processing
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-    except Exception as e:
-        metrics.count(Consts.TOTAL_FAILED_PROCESS_DOCUMENT)
-        logger.error(f"Failed to process document: {e}")
-        # Negative acknowledgment
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-
-
-def start_consumer(connection):
+def start_consumer():
     logger.info("Starting consumer...")
-    channel = connection.channel()
-    channel.queue_declare(queue='SyndicationQueue', durable=True)
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue='SyndicationQueue', on_message_callback=callback)
-    channel.start_consuming()
-
-
-def main():
-    connection = get_rabbit_connection()
-    if not connection:
-        logger.error("Failed to get RabbitMQ connection. Exiting.")
-        metrics.count(Consts.TOTAL_FAILED_FAILED_RABBIT_CONNECTION)
-        return
+    redis_connection = redis_manager.get_redis_connection("syndication")
 
     while True:
         try:
-            start_consumer(connection)
+            # Pop a message from the Redis queue
+            message = redis_connection.brpop("syndication")
+            if message:
+                body = json.loads(message[1])
+                process_document(body)
         except Exception as e:
-            connection = handle_consumer_exception(e)
+            metrics.count(Consts.TOTAL_FAILED_PROCESS_DOCUMENT)
+            logger.error(f"Failed to process document: {e}")
+
+
+def main():
+    try:
+        start_consumer()
+    except Exception as e:
+        handle_consumer_exception(e)
 
 
 def handle_consumer_exception(e):
@@ -126,15 +111,15 @@ def handle_consumer_exception(e):
 
     while True:
         time.sleep(30)
-        connection = get_rabbit_connection()
-        if connection:
-            logger.info("Successfully reconnected to RabbitMQ.")
-            return connection
-        else:
-            logger.error("Failed to reconnect to RabbitMQ. Retrying...")
-            metrics.count(Consts.TOTAL_FAILED_FAILED_RABBIT_CONNECTION)
+        try:
+            start_consumer()
+            logger.info("Successfully reconnected to Redis.")
+            break
+        except Exception as e:
+            logger.error("Failed to reconnect to Redis. Retrying...")
+            metrics.count(Consts.TOTAL_FAILED_CONSUME)
 
 
 if __name__ == '__main__':
-    logger.info("Starting RabbitMQ consumer...")
+    logger.info("Starting Redis consumer...")
     main()
