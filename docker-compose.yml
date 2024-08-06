@@ -1,7 +1,6 @@
 version: "3.5"
 
 services:
-
   server:
     image: webzio/duplicateservice:${TAG}
     hostname: '{{.Node.Hostname}}'
@@ -11,7 +10,7 @@ services:
       - /etc/hosts:/etc/hosts
       - /home/omgili/log/:/home/omgili/log/
     user: 1000:1000
-    command: python server.py
+    command: uvicorn server:app --host 0.0.0.0 --port 9039
     deploy:
       mode: replicated
       replicas: 1
