@@ -71,8 +71,8 @@ async def is_duplicate(request: Request):
         json_data = await request.json()
         language = json_data.get('language')
         lsh_cache = lsh_cache_dict.get(language)
-        status = await run_lsh_check(content=json_data.get('content'), language=language, lsh_cache=lsh_cache,
-                                     article_domain=json_data.get('domain'), article_id=json_data.get('article_id'))
+        status = run_lsh_check(content=json_data.get('content'), language=language, lsh_cache=lsh_cache,
+                               article_domain=json_data.get('domain'), article_id=json_data.get('article_id'))
         return JSONResponse(content={"status": status})
     except ValueError as e:
         return JSONResponse(content={"status": "duplicate_keys"})

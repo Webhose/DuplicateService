@@ -13,8 +13,7 @@ import time
 import os
 import metrics3_docker.metrics as metrics
 from elasticsearch import Elasticsearch
-import asyncio
-from aiomultiprocess import Pool
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 redis_pool = ConnectionPool(host=Consts.REDIS_HOST, port=Consts.REDIS_PORT, db=Consts.REDIS_DB)
 
@@ -55,34 +54,6 @@ except LookupError:
     nltk.download('stopwords')
 
 
-# Decorator to measure function execution time
-def timeit_decorator(func):
-    """
-    Decorator to time the execution of a function, supporting both async and sync functions.
-    """
-
-    async def async_wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = await func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        logger.info(f"Async function '{func.__name__}' took {execution_time:.4f} seconds to execute.")
-        return result
-
-    def sync_wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        logger.info(f"Function '{func.__name__}' took {execution_time:.4f} seconds to execute.")
-        return result
-
-    if asyncio.iscoroutinefunction(func):
-        return async_wrapper
-    else:
-        return sync_wrapper
-
-
 # Preprocess and tokenize the input text
 def preprocess_and_tokenize(text, language):
     text = text.lower()
@@ -94,7 +65,7 @@ def preprocess_and_tokenize(text, language):
 
 
 # Generate MinHash signature for a document
-async def minhash_signature(document, language, num_perm=128):
+def minhash_signature(document, language, num_perm=128):
     minhash = MinHash(num_perm=num_perm)
     tokens = preprocess_and_tokenize(document, language)
     for token in tokens:
@@ -111,7 +82,7 @@ def get_es_connection():
         return None
 
 
-def get_query(scroll_id=None, page_size=500, max_hours=12):
+def get_query(scroll_id=None, page_size=500, max_hours=Consts.MAX_HOURS_FOR_RECOVERY):
     today = datetime.now()
     yesterday = today - timedelta(hours=max_hours)
     today = today.strftime("%Y-%m-%dT%H:%M:%S.000Z")
@@ -145,13 +116,14 @@ def get_query(scroll_id=None, page_size=500, max_hours=12):
     return query
 
 
-async def get_texts_from_es(language="english"):
+def get_texts_from_es(language="english"):
     """
     Retrieve texts from Elasticsearch and insert MinHash signatures into LSH.
     """
     documents = []
     es_client = get_es_connection()
     if not es_client:
+        logger.error("Failed to connect to Elasticsearch.")
         return documents
 
     # Perform the initial search to get the initial scroll ID
@@ -169,14 +141,6 @@ async def get_texts_from_es(language="english"):
 
     for i in range(total_pages):
         logger.info(f"Processing page {i + 1} of {total_pages}")
-        try:
-            # Use the scroll ID to retrieve the next batch of results
-            result = es_client.scroll(scroll_id=scroll_id, scroll="5m")
-        except Exception as e:
-            logger.error(f"Error during scrolling: {e}")
-            break
-
-        scroll_id = result.get("_scroll_id")
         hits = result["hits"]["hits"]
 
         if not hits:
@@ -194,6 +158,14 @@ async def get_texts_from_es(language="english"):
                 "text": text,
             })
 
+        try:
+            # Use the scroll ID to retrieve the next batch of results
+            scroll_id = result.get("_scroll_id")
+            result = es_client.scroll(scroll_id=scroll_id, scroll="5m")
+        except Exception as e:
+            logger.error(f"Error during scrolling: {e}")
+            break
+
     # Clear the scroll to release resources on the server
     try:
         es_client.clear_scroll(scroll_id=scroll_id)
@@ -203,10 +175,10 @@ async def get_texts_from_es(language="english"):
     return documents
 
 
-async def process_batch(documents):
+def process_batch(documents):
     results = []
     for doc in documents:
-        minhash = await minhash_signature(doc.get('text'), doc.get('language'))
+        minhash = minhash_signature(doc.get('text'), doc.get('language'))
         results.append({
             "article_id": doc.get('article_id'),
             "article_domain": doc.get('article_domain'),
@@ -216,34 +188,42 @@ async def process_batch(documents):
     return results
 
 
-async def process_batches(lsh_with_ttl, documents, workers=4, batch_size=1000):
-    async with Pool(workers) as pool:
-        tasks = []
+def process_batches(lsh_with_ttl, documents, workers=4, batch_size=1000):
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = {}
         for i in range(0, len(documents), batch_size):
             logger.info(f"Processing batch {i // batch_size + 1}...")
             batch = documents[i:i + batch_size]
-            tasks.append(pool.apply(process_batch, (batch,)))
+            future = executor.submit(process_batch, batch)
+            futures[future] = i // batch_size + 1
 
-        results = await asyncio.gather(*tasks)
-        logger.info("Finished processing all batches.")
-        # Flatten the list of results
-        results = [item for sublist in results for item in sublist]
-        logger.info(f"Inserting {len(results)} MinHash signatures into LSH...")
-        # Insert into LSH with batch insertion
-        with lsh_with_ttl.lsh.insertion_session() as session:
-            for doc in results:
+        results = {}
+        for future in as_completed(futures):
+            batch_number = futures[future]
+            results[batch_number] = future.result()
+
+    logger.info("Finished processing all batches.")
+    logger.info(f"Inserting MinHash signatures into LSH...")
+    # Insert into LSH with batch insertion
+    with lsh_with_ttl.lsh.insertion_session() as session:
+        for batch_number, batch_results in results.items():
+            logger.info(f"Inserting batch {batch_number}...")
+            for doc in batch_results:
                 key = f"{doc.get('article_id')}|{doc.get('article_domain')}"
                 session.insert(key, doc.get('minhash'))
 
 
-@timeit_decorator
-async def fast_recovery():
+def fast_recovery():
     """
     Initialize LSH with TTL and load documents from Elasticsearch.
     """
+    start_time = time.time()
+    logger.info("Starting fast recovery...")
     lsh_with_ttl = MinHashLSHTTL(threshold=0.9, num_perm=128)
-    documents = await get_texts_from_es()
-    await process_batches(lsh_with_ttl, documents)
+    documents = get_texts_from_es()
+    process_batches(lsh_with_ttl, documents)
+    end_time = time.time()
+    logger.info(f"Fast recovery took {end_time - start_time:.4f} seconds.")
     return lsh_with_ttl
 
 
@@ -262,7 +242,7 @@ def get_lsh_from_redis(lsh_key=None):
     except TypeError:
         metrics.count(Consts.TOTAL_LSH_OBJECT_CREATED)
         logger.error("LSH object not found in Redis. Creating new LSH.")
-        lsh_with_ttl = asyncio.get_event_loop().run_until_complete(fast_recovery())()
+        lsh_with_ttl = fast_recovery()
     except Exception as e:
         logger.error(f"Error while getting LSH from Redis: {str(e)}")
     finally:
@@ -302,7 +282,7 @@ def get_status_from_candidates(article_domain, candidate_pairs, article_id):
 
 
 # Run LSH check to determine document status
-async def run_lsh_check(**kwargs):
+def run_lsh_check(**kwargs):
     content = kwargs.get('content')
     language = kwargs.get('language')
     article_domain = kwargs.get('article_domain')
@@ -312,7 +292,7 @@ async def run_lsh_check(**kwargs):
     if not lsh_cache:
         return None
 
-    minhash = await minhash_signature(content, language)
+    minhash = minhash_signature(content, language)
     lsh_cache.insert(f"{article_id}|{article_domain}", minhash)
     candidate_pairs = lsh_cache.query(minhash)
     return get_status_from_candidates(article_domain, candidate_pairs, article_id)
@@ -325,9 +305,3 @@ def store_article_in_redis(url, queue_name="similarity"):
             redis_connection.sadd(queue_name, url)
     except Exception as e:
         logger.critical(f"Failed to store article in Redis: {str(e)}")
-
-
-# if __name__ == "__main__":
-#     # Start the event loop
-#     loop = asyncio.get_event_loop()
-#     lsh = loop.run_until_complete(fast_recovery())
