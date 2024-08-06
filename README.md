@@ -1,4 +1,4 @@
-# Duplicate Detection Service 
+# Duplicate Detection Service
 
 ![image](https://github.com/user-attachments/assets/26679e6e-5de0-404b-af2a-8624ee82a3f8)
 
