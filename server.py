@@ -5,25 +5,41 @@ import asyncio
 import uvicorn
 from contextlib import asynccontextmanager
 import logging
+import signal
 
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
-                    level=logging.INFO)
-
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger()
 
 ADDRESS = "0.0.0.0"
 PORT = 9039
-batch_size = 5000
-batch_counter = 0
 lsh_cache_dict = {}
-counter = 0
 
-cleanup_task = None
+
+class GracefulShutdown:
+    def __init__(self):
+        self.shutdown_event = asyncio.Event()
+
+    def __enter__(self):
+        signal.signal(signal.SIGTERM, self.handle_exit)
+        signal.signal(signal.SIGINT, self.handle_exit)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def handle_exit(self, signum, frame):
+        logger.info(f"Received shutdown signal: {signum}")
+        self.shutdown_event.set()
+
+    async def wait(self):
+        await self.shutdown_event.wait()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global lsh_cache_dict, cleanup_task
+    global lsh_cache_dict
+
+    graceful_shutdown = GracefulShutdown()
+    graceful_shutdown.__enter__()
 
     logger.info("Starting up...")
     lsh_cache_dict = {
@@ -32,42 +48,23 @@ async def lifespan(app: FastAPI):
     }
     logger.info("Initialized LSH cache with TTL for supported languages.")
 
-    # Start the background cleanup task
-    # cleanup_task = asyncio.create_task(background_cleanup_task())
-
     yield  # Control is returned to FastAPI here
 
     logger.info("Shutting down...")
+    await graceful_shutdown.wait()  # Wait for the shutdown signal
     save_lsh_to_redis(lsh_cache_dict)
     logger.info("Saved LSH cache to Redis.")
 
-    # # Cancel the cleanup task
-    # if cleanup_task:
-    #     cleanup_task.cancel()
-    #     try:
-    #         await cleanup_task
-    #     except asyncio.CancelledError:
-    #         logger.info("Cleanup task was cancelled")
+    graceful_shutdown.__exit__(None, None, None)
 
 
 app = FastAPI(lifespan=lifespan)
 
 
-# async def background_cleanup_task():
-#     while True:
-#         logger.info("Running background cleanup task...")
-#         metrics.count(Consts.BACKGROUND_CLEANUP_TASK_TOTAL)
-#         for language, lsh_cache in lsh_cache_dict.items():
-#             lsh_cache.cleanup_expired_keys()
-#         # Sleep for 1 hour before the next cleanup
-#         await asyncio.sleep(10)
-
-
 @app.post("/is_duplicate")
 async def is_duplicate(request: Request):
-    global batch_counter, counter, lsh_cache_dict
+    global lsh_cache_dict
     try:
-        # get parameters from request
         json_data = await request.json()
         language = json_data.get('language')
         lsh_cache = lsh_cache_dict.get(language)

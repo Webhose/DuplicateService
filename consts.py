@@ -9,7 +9,7 @@ class Consts:
     QUEUE_NAME = 'SyndicationQueue'
     DUPLICATE_KEYS = "duplicate_keys"
     UNIQUE = "unique"
-    MAX_HOURS_FOR_RECOVERY = 12
+    MAX_HOURS_FOR_RECOVERY = 4
 
     # Metrics
     TOTAL_LSH_OBJECT_CREATED = "total_lsh_object_created"
