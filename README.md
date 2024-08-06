@@ -1,6 +1,7 @@
 # Duplicate Detection Service
 
-![image](https://github.com/user-attachments/assets/26679e6e-5de0-404b-af2a-8624ee82a3f8)
+## full documentation - 
+https://www.notion.so/Syndication-Service-98c744216cca4da88261bcf9321711a0
 
 ## Overview
 This service employs MinHash and Locality-Sensitive Hashing (LSH) to identify duplicate documents. The functionality is exposed through the API endpoint /is_duplicate, enabling users to check if a given document duplicates any previously processed documents. The service is built on FastAPI, a modern and rapid web framework designed for creating APIs with Python 3.7+.
