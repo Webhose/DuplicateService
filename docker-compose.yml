@@ -27,7 +27,7 @@ services:
       - /etc/hosts:/etc/hosts
       - /home/omgili/log/:/home/omgili/log/
     user: 1000:1000
-    command: python RabbitMQ/rabbit_consumer.py
+    command: python RabbitMQ/consumer.py
     deploy:
       mode: replicated
       replicas: 3
