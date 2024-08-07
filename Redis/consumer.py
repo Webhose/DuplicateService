@@ -50,6 +50,7 @@ def validate_document(body):
         response.raise_for_status()
 
         message = response.json().get('status')
+        body['syndicated'] = False
         if message == Consts.SIMILARITY:
             metrics.count(Consts.TOTAL_SIMILARITY)
             store_article_in_redis(url)
